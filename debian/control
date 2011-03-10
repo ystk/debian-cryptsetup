@@ -1,0 +1,67 @@
+Source: cryptsetup
+Section: admin
+Priority: optional
+Maintainer: Debian Cryptsetup Team <pkg-cryptsetup-devel@lists.alioth.debian.org>
+Uploaders: Jonas Meurer <mejo@debian.org>
+Build-Depends: libgcrypt11-dev, libdevmapper-dev (>= 2:1.02.24-4), libpopt-dev, uuid-dev, libselinux1-dev, libsepol1-dev, libtool (>= 2.2), autoconf, automake, pkg-config, autopoint, gettext, debhelper (>= 6.0.7~), xsltproc, docbook-xml, docbook-xsl (>= 1.74.3+dfsg)
+Standards-Version: 3.9.1
+Homepage: http://code.google.com/p/cryptsetup/
+Vcs-Browser: http://svn.debian.org/wsvn/pkg-cryptsetup/cryptsetup/trunk
+Vcs-Svn: svn://svn.debian.org/svn/pkg-cryptsetup/cryptsetup/trunk
+
+Package: cryptsetup
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, dmsetup
+Suggests: udev, initramfs-tools (>= 0.91) | linux-initramfs-tool, busybox, dosfstools
+Provides: cryptsetup-luks
+Conflicts: cryptsetup-luks
+Replaces: cryptsetup-luks, hashalot (<< 0.3-2)
+Breaks: hashalot (<< 0.3-2)
+Description: configures encrypted block devices
+ Cryptsetup provides a command-line interface for configuring encrypted
+ devices. This is done using the Linux kernel device mapper target
+ dm-crypt. This version of cryptsetup has integrated support for LUKS.
+ .
+ cryptsetup is backwards compatible with the on-disk format of cryptoloop,
+ but also supports more secure formats. This package includes support for
+ automatically configuring encrypted devices at boot time via the config
+ file /etc/crypttab. Additional features are cryptoroot support through
+ initramfs-tools and several supported ways to read a passphrase or key.
+
+Package: cryptsetup-udeb
+Section: debian-installer
+XC-Package-Type: udeb
+Architecture: any
+Depends: ${shlibs:Depends}, dmsetup-udeb
+Description: configures encrypted block devices
+ Cryptsetup provides a command-line interface for configuring encrypted
+ devices. This is done using the Linux kernel device mapper target
+ dm-crypt. This version of cryptsetup has integrated support for LUKS.
+ .
+ cryptsetup is backwards compatible with the on-disk format of cryptoloop,
+ but also supports more secure formats. This package includes support for
+ automatically configuring encrypted devices at boot time via the config
+ file /etc/crypttab. Additional features are cryptoroot support through
+ initramfs-tools and several supported ways to read a passphrase or key.
+
+Package: libcryptsetup1
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: libcryptsetup shared library
+ Cryptsetup provides a command-line interface for configuring encrypted
+ devices. This is done using the Linux kernel device mapper target
+ dm-crypt. This version of cryptsetup has integrated support for LUKS.
+ .
+ This package provides the libcryptsetup shared library.
+
+Package: libcryptsetup-dev
+Section: libdevel
+Architecture: any
+Depends: ${misc:Depends}, libcryptsetup1 (= ${binary:Version})
+Description: libcryptsetup development files
+ Cryptsetup provides a command-line interface for configuring encrypted
+ devices. This is done using the Linux kernel device mapper target
+ dm-crypt. This version of cryptsetup has integrated support for LUKS.
+ .
+ This package provides the libcryptsetup development files.
