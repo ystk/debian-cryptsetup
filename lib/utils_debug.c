@@ -3,7 +3,23 @@
  * This code is intended to run only in debug mode.
  *
  * inspired by psmisc/fuser proc scanning code
+ *
+ * Copyright (C) 2009-2012, Red Hat, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,7 +46,7 @@ static int check_pid(const pid_t pid, const char *dev_name, const char *short_de
 	char dirpath[MAX_SHORTNAME], fdpath[MAX_SHORTNAME], linkpath[MAX_PATHNAME];
 	DIR *dirp;
 	struct dirent *direntry;
-	size_t len;
+	ssize_t len;
 	int r = 0;
 
 	snprintf(dirpath, sizeof(dirpath), "/proc/%d/fd", pid);

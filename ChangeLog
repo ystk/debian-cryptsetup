@@ -1,3 +1,236 @@
+2012-05-27  Milan Broz  <gmazyland@gmail.com>
+	* Fix readonly activation if underlying device is readonly (1.4.0).
+	* Include stddef.h in libdevmapper.h (size_t definition).
+	* Version 1.4.3.
+
+2012-05-21  Milan Broz  <gmazyland@gmail.com>
+	* Add --enable-fips for linking with fipscheck library.
+	* Initialize binary and library selfcheck if running in FIPS mode.
+	* Use FIPS RNG in FIPS mode for KEY and SALT (only gcrypt backend supported).
+
+2012-05-09  Milan Broz  <gmazyland@gmail.com>
+	* Fix keyslot removal (wipe keyslot) for device with 4k hw block (1.4.0).
+	* Allow empty cipher (cipher_null) for testing.
+
+2012-05-02  Milan Broz  <gmazyland@gmail.com>
+	* Fix loop mapping on readonly file.
+	* Relax --shared test, allow mapping even for overlapping segments.
+	* Support shared flag for LUKS devices (dangerous).
+	* Switch on retry on device remove for libdevmapper.
+	* Allow "private" activation (skip some udev global rules) flag.
+
+2012-04-09  Milan Broz  <gmazyland@gmail.com>
+	* Fix header check to support old (cryptsetup 1.0.0) header alignment. (1.4.0)
+	* Version 1.4.2.
+
+2012-03-16  Milan Broz  <gmazyland@gmail.com>
+	* Add --keyfile-offset and --new-keyfile-offset parameters to API and CLI.
+	* Add repair command and crypt_repair() for known LUKS metadata problems repair.
+	* Allow to specify --align-payload only for luksFormat.
+
+2012-03-16  Milan Broz  <mbroz@redhat.com>
+	* Unify password verification option.
+	* Support password verification with quiet flag if possible. (1.2.0)
+	* Fix retry if entered passphrases (with verify option) do not match.
+	* Support UUID=<LUKS_UUID> format for device specification.
+
+2012-02-11  Milan Broz  <mbroz@redhat.com>
+	* Add --master-key-file option to luksOpen (open using volume key).
+
+2012-01-12  Milan Broz  <mbroz@redhat.com>
+	* Fix use of empty keyfile.
+
+2011-11-13  Milan Broz  <mbroz@redhat.com>
+	* Fix error message for luksClose and detached LUKS header.
+	* Allow --header for status command to get full info with detached header.
+
+2011-11-09  Milan Broz  <mbroz@redhat.com>
+	* Version 1.4.1.
+
+2011-11-05  Milan Broz  <mbroz@redhat.com>
+	* Merge pycryptsetup (Python libcryptsetup bindings).
+	* Fix stupid typo in set_iteration_time API call.
+	* Fix cryptsetup status output if parameter is device path.
+
+2011-10-27  Milan Broz  <mbroz@redhat.com>
+	* Fix crypt_get_volume_key_size() for plain device.
+	* Fix FSF address in license text.
+
+2011-10-25  Milan Broz  <mbroz@redhat.com>
+	* Print informative message in isLuks only in verbose mode.
+	* Version 1.4.0.
+
+2011-10-10  Milan Broz  <mbroz@redhat.com>
+	* Version 1.4.0-rc1.
+
+2011-10-05  Milan Broz  <mbroz@redhat.com>
+	* Support Nettle 2.4 crypto backend (for ripemd160).
+	* If device is not rotational, do not use Gutmann wipe method.
+	* Add crypt_last_error() API call.
+	* Fix luksKillSLot exit code if slot is inactive or invalid.
+	* Fix exit code if passphrases do not match in luksAddKey.
+	* Add LUKS on-disk format description into package.
+
+2011-09-22  Milan Broz  <mbroz@redhat.com>
+	* Support key-slot option for luksOpen (use only explicit keyslot).
+
+2011-08-22  Milan Broz  <mbroz@redhat.com>
+	* Add more paranoid checks for LUKS header and keyslot attributes.
+	* Fix crypt_load to properly check device size.
+	* Use new /dev/loop-control (kernel 3.1) if possible.
+	* Enhance check of device size before writing LUKS header.
+	* Do not allow context format of already formatted device.
+
+2011-07-25  Milan Broz  <mbroz@redhat.com>
+	* Remove hash/hmac restart from crypto backend and make it part of hash/hmac final.
+	* Improve check for invalid offset and size values.
+
+2011-07-19  Milan Broz  <mbroz@redhat.com>
+	* Revert default initialisation of volume key in crypt_init_by_name().
+	* Do not allow key retrieval while suspended (key could be wiped).
+	* Do not allow suspend for non-LUKS devices.
+	* Support retries and timeout parameters for luksSuspend.
+	* Add --header option for detached metadata (on-disk LUKS header) device.
+	* Add crypt_init_by_name_and_header() and crypt_set_data_device() to API.
+	* Allow different data offset setting for detached header.
+
+2011-07-07  Milan Broz  <mbroz@redhat.com>
+	* Remove old API functions (all functions using crypt_options).
+	* Add --enable-discards option to allow discards/TRIM requests.
+	* Add crypt_get_iv_offset() function to API.
+
+2011-07-01  Milan Broz  <mbroz@redhat.com>
+	* Add --shared option for creating non-overlapping crypt segments.
+	* Add shared flag to libcryptsetup api.
+	* Fix plain crypt format parameters to include size option (API change).
+
+2011-06-08  Milan Broz  <mbroz@redhat.com>
+	* Fix return code for status command when device doesn't exists.
+
+2011-05-24  Milan Broz  <mbroz@redhat.com>
+	* Version 1.3.1.
+
+2011-05-17  Milan Broz  <mbroz@redhat.com>
+	* Fix keyfile=- processing in create command (1.3.0).
+	* Simplify device path status check.
+
+2011-05-03  Milan Broz  <mbroz@redhat.com>
+	* Do not ignore size argument for create command (1.2.0).
+
+2011-04-18  Milan Broz  <mbroz@redhat.com>
+	* Fix error paths in blockwise code and lseek_write call.
+	* Add Nettle crypto backend support.
+
+2011-04-05  Milan Broz  <mbroz@redhat.com>
+	* Version 1.3.0.
+
+2011-03-22  Milan Broz  <mbroz@redhat.com>
+	* Also support --skip and --hash option for loopaesOpen.
+	* Fix return code when passphrase is read from pipe.
+	* Document cryptsetup exit codes.
+
+2011-03-18  Milan Broz  <mbroz@redhat.com>
+	* Respect maximum keyfile size paramater.
+	* Introduce maximum default keyfile size, add configure option.
+	* Require the whole key read from keyfile in create command (broken in 1.2.0).
+	* Fix offset option for loopaesOpen.
+	* Lock memory also in luksDump command.
+	* Version 1.3.0-rc2.
+
+2011-03-14  Milan Broz  <mbroz@redhat.com>
+	* Version 1.3.0-rc1.
+
+2011-03-11  Milan Broz  <mbroz@redhat.com>
+	* Add loop manipulation code and support mapping of images in file.
+	* Add backing device loop info into status message.
+	* Add luksChangeKey command.
+
+2011-03-05  Milan Broz  <mbroz@redhat.com>
+	* Add exception to COPYING for binary distribution linked with OpenSSL library.
+	* Set secure data flag (wipe all ioclt buffers) if devmapper library supports it.
+
+2011-01-29  Milan Broz  <mbroz@redhat.com>
+	* Fix mapping removal if device disappeared but node still exists.
+	* Fix luksAddKey return code if master key is used.
+
+2011-01-25  Milan Broz  <mbroz@redhat.com>
+	* Add loop-AES handling (loopaesOpen and loopaesClose commands).
+	 (requires kernel 2.6.38 and above)
+
+2011-01-05  Milan Broz  <mbroz@redhat.com>
+	* Fix static build (--disable-static-cryptsetup now works properly).
+
+2010-12-30  Milan Broz  <mbroz@redhat.com>
+	* Add compile time crypto backends implementation
+	  (gcrypt, OpenSSL, NSS and userspace Linux kernel crypto api).
+	* Currently NSS is lacking ripemd160, cannot provide full plain compatibility.
+	* Use --with-crypto_backend=[gcrypt|openssl|nss|kernel] to configure.
+
+2010-12-20  Milan Broz  <mbroz@redhat.com>
+	* Version 1.2.0.
+
+2010-11-25  Milan Broz  <mbroz@redhat.com>
+	* Fix crypt_activate_by_keyfile() to work with PLAIN devices.
+	* Fix create command to properly handle keyfile size.
+
+2010-11-16  Milan Broz  <mbroz@redhat.com>
+	* Version 1.2.0-rc1.
+
+2010-11-13  Milan Broz  <mbroz@redhat.com>
+	* Fix password callback call.
+	* Fix default plain password entry from terminal in activate_by_passphrase.
+	* Add --dump-master-key option for luksDump to allow volume key dump.
+	* Allow to activate by internally cached volume key
+	  (format/activate without keyslots active - used for temporary devices).
+	* Initialize volume key from active device in crypt_init_by_name()
+	* Fix cryptsetup binary exitcodes.
+	* Increase library version (still binary compatible with 1.1.x release).
+
+2010-11-01  Milan Broz  <mbroz@redhat.com>
+	* No longer support luksDelKey, reload and --non-exclusive.
+	* Remove some obsolete info from man page.
+	* Add crypt_get_type(), crypt_resize(), crypt_keyslot_max()
+	and crypt_get_active_device() to API.
+	* Rewrite all implementations in cryptsetup to new API.
+	* Fix luksRemoveKey to behave as documented (do not ask
+	for remaining keyslot passphrase).
+	* Add more regression tests for commands.
+	* Disallow mapping of device which is already in use (mapped or mounted).
+	* Disallow luksFormat on device in use.
+
+2010-10-27  Milan Broz  <mbroz@redhat.com>
+	* Rewrite cryptsetup luksFormat, luksOpen, luksAddKey to use new API
+	  to allow adding new features.
+	* Implement --use-random and --use-urandom for luksFormat to allow
+	  setting of RNG for volume key generator.
+	* Add crypt_set_rng_type() and crypt_get_rng_type() to API.
+	* Add crypt_set_uuid() to API.
+	* Allow UUID setting in luksFormat and luksUUID (--uuid parameter).
+	* Add --keyfile-size and --new-keyfile-size (in bytes) size and disallow overloading
+	  of --key-size for limiting keyfile reads.
+	* Fix luksFormat to properly use key file with --master-key-file switch.
+	* Fix possible double free when handling master key file.
+
+2010-10-17  Milan Broz  <mbroz@redhat.com>
+	* Add crypt_get_device_name() to API (get underlying device name).
+	* Change detection for static libraries.
+	* Fix pkg-config use in automake scripts.
+	* Remove --disable-shared-library switch and handle static library build
+	  by common libtool logic (using --enable-static).
+	* Add --enable-static-cryptsetup option to build cryptsetup.static binary
+	  together with shared build.
+
+2010-08-05  Milan Broz  <mbroz@redhat.com>
+	* Wipe iteration and salt after KillSlot in LUKS header.
+	* Rewrite file differ test to C (and fix it to really work).
+	* Switch to 1MiB default alignment of data.
+	  For more info see https://bugzilla.redhat.com/show_bug.cgi?id=621684
+	* Do not query non-existent device twice (cryptsetup status /dev/nonexistent).
+	* Check if requested hash is supported before writing LUKS header.
+
+2010-07-28  Arno Wagner <arno@wagner.name>
+	* Add FAQ (Frequently Asked Questions) file to distribution.
+
 2010-07-03  Milan Broz  <mbroz@redhat.com>
 	* Fix udev support for old libdevmapper with not compatible definition.
 	* Version 1.1.3.
@@ -239,7 +472,7 @@
 	* configure.in (AC_OUTPUT): Add m4/Makefile.
 	(AM_GNU_GETTEXT_VERSION): Bump to 0.15.
 
-2006-10-22  David H‰rdeman  <david@hardeman.nu>
+2006-10-22  David H√§rdeman  <david@hardeman.nu>
 
 	* Allow hashing of keys passed through stdin.
 
@@ -306,7 +539,7 @@
 
 2006-08-04  Clemens Fruhwirth  <clemens@endorphin.org>
 
-	* lib/setup.c (get_key): Applied patch from David H‰rdeman
+	* lib/setup.c (get_key): Applied patch from David H√§rdeman
 	<david@2gen.com> for reading binary keys from stdin using
 	the "-" as key file.
 
@@ -323,7 +556,7 @@
 
 2006-07-23  Clemens Fruhwirth  <clemens@endorphin.org>
 
-	* Applied patches from David H‰rdeman <david@2gen.com> to fix 64
+	* Applied patches from David H√§rdeman <david@2gen.com> to fix 64
 	bit compiler warning issues.
 
 2006-05-19  Clemens Fruhwirth  <clemens@endorphin.org>
@@ -342,7 +575,7 @@
 
 	* configure.in: Release 1.0.3.
 
-	* Applied patch by Johannes Weiﬂl for more meaningful exit codes
+	* Applied patch by Johannes Wei√ül for more meaningful exit codes
 	and password retries
 
 2006-03-30  Clemens Fruhwirth  <clemens@endorphin.org>

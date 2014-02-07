@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: cryptsetup 1.1.0-rc4\n"
 "Report-Msgid-Bugs-To: dm-crypt@saout.de\n"
-"POT-Creation-Date: 2010-07-03 15:49+0200\n"
+"POT-Creation-Date: 2012-05-31 10:01+0200\n"
 "PO-Revision-Date: 2010-01-27 07:30+0700\n"
 "Last-Translator: Arif E. Nugroho <arif_endro@yahoo.com>\n"
 "Language-Team: Indonesian <translation-team-id@lists.sourceforge.net>\n"
@@ -16,353 +16,376 @@ msgstr ""
 "Content-Type: text/plain; charset=ISO-8859-1\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: lib/libdevmapper.c:120
+#: lib/libdevmapper.c:184
 msgid "Cannot initialize device-mapper. Is dm_mod kernel module loaded?\n"
 msgstr ""
 "Tidak dapat menginisialisasi pemeta-perangkat. Apakah kernel modul dm_mod "
 "telah dimuat?\n"
 
-#: lib/libdevmapper.c:408
+#: lib/libdevmapper.c:423
 #, c-format
 msgid "DM-UUID for device %s was truncated.\n"
 msgstr "DM-UUID untuk perangkat %s telah terpotong.\n"
 
-#: lib/setup.c:103
-#, c-format
-msgid "Cannot not read %d bytes from key file %s.\n"
-msgstr "Tidak dapat membaca %d bytes dari berkas kunci %s.\n"
+#: lib/random.c:74
+msgid ""
+"System is out of entropy while generating volume key.\n"
+"Please move mouse or type some text in another window to gather some random "
+"events.\n"
+msgstr ""
 
-#: lib/setup.c:115
+#: lib/random.c:78
+#, c-format
+msgid "Generating key (%d%% done).\n"
+msgstr ""
+
+#: lib/random.c:167
+msgid "Fatal error during RNG initialisation.\n"
+msgstr ""
+
+#: lib/random.c:204
+#, fuzzy
+msgid "Unknown RNG quality requested.\n"
+msgstr "Tipe perangkat sandi %s yang diminta tidak diketahui.\n"
+
+#: lib/random.c:209
 #, fuzzy, c-format
-msgid "Key processing error (using hash algorithm %s).\n"
+msgid "Error %d reading from RNG: %s\n"
+msgstr "Kesalahan dalam pembacaan kata sandi.\n"
+
+#: lib/setup.c:163
+#, fuzzy
+msgid "Cannot initialize crypto RNG backend.\n"
+msgstr "Tidak dapat menginisialisasi backend crypto.\n"
+
+#: lib/setup.c:169
+msgid "Cannot initialize crypto backend.\n"
+msgstr "Tidak dapat menginisialisasi backend crypto.\n"
+
+#: lib/setup.c:192
+#, fuzzy, c-format
+msgid "Hash algorithm %s not supported.\n"
+msgstr "Hash %s LUKS yang diminta tidak didukung.\n"
+
+#: lib/setup.c:195 lib/loopaes/loopaes.c:88
+#, fuzzy, c-format
+msgid "Key processing error (using hash %s).\n"
 msgstr "Terjadi kesalahan dalam pengolahan kunci.\n"
 
-#: lib/setup.c:170
+#: lib/setup.c:231
 msgid "All key slots full.\n"
 msgstr "Semua slot kunci telah penuh.\n"
 
-#: lib/setup.c:177 lib/setup.c:306 lib/setup.c:763
+#: lib/setup.c:238
 #, c-format
 msgid "Key slot %d is invalid, please select between 0 and %d.\n"
 msgstr "Slot kunci %d tidak valid, mohon pilih diantara 0 dan %d.\n"
 
-#: lib/setup.c:183
+#: lib/setup.c:244
 #, c-format
 msgid "Key slot %d is full, please select another one.\n"
 msgstr "Slot kunci %d penuh, mohon pilih yang lain.\n"
 
-#: lib/setup.c:202
-msgid "Enter any remaining LUKS passphrase: "
-msgstr "Masukan kata sandi LUKS yang tersisa: "
-
-#: lib/setup.c:223
-#, c-format
-msgid "Key slot %d verified.\n"
-msgstr "Slot kunci %d telah terverifikasi.\n"
-
-#: lib/setup.c:258
-#, c-format
-msgid "Cannot get info about device %s.\n"
-msgstr "Tidak dapat mendapatkan informasi mengenai perangkat %s.\n"
-
-#: lib/setup.c:266
-#, c-format
-msgid "Device %s has zero size.\n"
-msgstr "Perangkat %s memiliki ukuran nol.\n"
-
-#: lib/setup.c:270
-#, c-format
-msgid "Device %s is too small.\n"
-msgstr "Perangkat %s terlalu kecil.\n"
-
-#: lib/setup.c:295
-msgid "Enter LUKS passphrase to be deleted: "
-msgstr "Masukan kata sandi LUKS yang akan dihapus: "
-
-#: lib/setup.c:301
-#, c-format
-msgid "key slot %d selected for deletion.\n"
-msgstr "slot kunci %d terpilih untuk penghapusan.\n"
-
-#: lib/setup.c:312
-#, c-format
-msgid "Key %d not active. Can't wipe.\n"
-msgstr "Kunci %d tidak aktif. Tidak dapat menghapus.\n"
-
-#: lib/setup.c:318
-msgid ""
-"This is the last keyslot. Device will become unusable after purging this key."
-msgstr ""
-"Ini adalah slot kunci terakhir. Perangkat mungkin akan menjadi tidak stabil "
-"setelah menghapus kunci ini."
-
-#: lib/setup.c:369 lib/setup.c:1674 lib/setup.c:1727 lib/setup.c:1785
-#, c-format
-msgid "Device %s already exists.\n"
-msgstr "Perangkat %s telah ada.\n"
-
-#: lib/setup.c:374
-#, c-format
-msgid "Invalid key size %d.\n"
-msgstr "Besar kunci %d tidak valid.\n"
-
-#: lib/setup.c:476 lib/setup.c:1679
+#: lib/setup.c:347
 #, c-format
 msgid "Enter passphrase for %s: "
 msgstr "Masukan kata sandi untuk %s: "
 
-#: lib/setup.c:605 lib/setup.c:1391 lib/setup.c:1735
-msgid "Enter passphrase: "
-msgstr "Masukan kata sandi: "
+#: lib/setup.c:507
+#, fuzzy
+msgid "Cannot find a free loopback device.\n"
+msgstr "Tidak dapat membaca perangkat %s.\n"
 
-#: lib/setup.c:648 lib/setup.c:1030 lib/setup.c:1827
+#: lib/setup.c:515
+msgid ""
+"Attaching loopback device failed (loop device with autoclear flag is "
+"required).\n"
+msgstr ""
+
+#: lib/setup.c:571
+#, c-format
+msgid "LUKS header detected but device %s is too small.\n"
+msgstr "Header LUKS terdeteksi tetapi perangkat %s terlalu kecil.\n"
+
+#: lib/setup.c:587 lib/setup.c:1075
+#, fuzzy
+msgid "This operation is not supported for this device type.\n"
+msgstr "Operasi ini tidak didukung untuk perangkat crypt %s.\n"
+
+#: lib/setup.c:650 lib/setup.c:1042 lib/setup.c:1812
 #, c-format
 msgid "Device %s is not active.\n"
 msgstr "Perangkat %s tidak aktif.\n"
 
-#: lib/setup.c:755
-msgid "No known cipher specification pattern detected.\n"
-msgstr "Tidak ada pola spesifikasi cipher yang dikenal terdeteksi.\n"
-
-#: lib/setup.c:769
-msgid "Enter LUKS passphrase: "
-msgstr "Masukan kata sandi LUKS: "
-
-#: lib/setup.c:910 lib/setup.c:1143 lib/setup.c:1197 lib/setup.c:1222
-#: lib/setup.c:1241
-msgid "Cannot initialize crypto backend.\n"
-msgstr "Tidak dapat menginisialisasi backend crypto.\n"
-
-#: lib/setup.c:1039
+#: lib/setup.c:668
 #, c-format
 msgid "Underlying device for crypt device %s disappeared.\n"
 msgstr ""
 
-#: lib/setup.c:1056
+#: lib/setup.c:782
 msgid "Invalid plain crypt parameters.\n"
 msgstr "Parameter crypt tidak valid.\n"
 
-#: lib/setup.c:1061
+#: lib/setup.c:787 lib/setup.c:892
 msgid "Invalid key size.\n"
 msgstr "Ukuran kunci tidak valid.\n"
 
-#: lib/setup.c:1094
+#: lib/setup.c:828
 msgid "Can't format LUKS without device.\n"
 msgstr "Tidak dapat memformat LUKS tanpat perangkat.\n"
 
-#: lib/setup.c:1116
-#, c-format
-msgid "Can't wipe header on device %s.\n"
+#: lib/setup.c:866
+#, fuzzy, c-format
+msgid "Cannot format device %s which is still in use.\n"
+msgstr "Tidak dapat membuka perangkat %s untuk akses %s%s.\n"
+
+#: lib/setup.c:869
+#, fuzzy, c-format
+msgid "Cannot wipe header on device %s.\n"
 msgstr "Tidak dapat menghapus kepala di perangkat %s.\n"
 
-#: lib/setup.c:1164
+#: lib/setup.c:887
+#, fuzzy
+msgid "Can't format LOOPAES without device.\n"
+msgstr "Tidak dapat memformat LUKS tanpat perangkat.\n"
+
+#: lib/setup.c:947
 #, c-format
 msgid "Unknown crypt device type %s requested.\n"
 msgstr "Tipe perangkat sandi %s yang diminta tidak diketahui.\n"
 
-#: lib/setup.c:1283
+#: lib/setup.c:1090
+msgid "Do you really want to change UUID of device?"
+msgstr ""
+
+#: lib/setup.c:1175 lib/setup.c:1222 lib/setup.c:1271 lib/setup.c:1337
+#: lib/setup.c:1413 lib/setup.c:1494 lib/setup.c:1540 lib/setup.c:1877
+#: lib/setup.c:1982 lib/setup.c:2121
+msgid "This operation is supported only for LUKS device.\n"
+msgstr "Operasi ini hanya didukunga untuk perangkat LUKS.\n"
+
+#: lib/setup.c:1182
 #, c-format
 msgid "Volume %s is not active.\n"
 msgstr "Volume %s tidak aktif.\n"
 
-#: lib/setup.c:1296
+#: lib/setup.c:1194
 #, c-format
 msgid "Volume %s is already suspended.\n"
 msgstr "Volume %s telah disuspend.\n"
 
-#: lib/setup.c:1324 lib/setup.c:1373 lib/setup.c:1432 lib/setup.c:1510
-#: lib/setup.c:1582 lib/setup.c:1627 lib/setup.c:1718 lib/setup.c:1776
-#: lib/setup.c:1897 lib/setup.c:1980 lib/setup.c:2080
-msgid "This operation is supported only for LUKS device.\n"
-msgstr "Operasi ini hanya didukunga untuk perangkat LUKS.\n"
-
-#: lib/setup.c:1335 lib/setup.c:1384
+#: lib/setup.c:1232 lib/setup.c:1281
 #, c-format
 msgid "Volume %s is not suspended.\n"
 msgstr "Volume %s tidak disuspend.\n"
 
-#: lib/setup.c:1446 lib/setup.c:1524
+#: lib/setup.c:1288 lib/setup.c:1665 lib/setup.c:1679 src/cryptsetup.c:343
+msgid "Enter passphrase: "
+msgstr "Masukan kata sandi: "
+
+#: lib/setup.c:1351 lib/setup.c:1427
 msgid "Cannot add key slot, all slots disabled and no volume key provided.\n"
 msgstr ""
 "Tidak dapat menambahkan slot kunci, seluruh slot tidak aktif dan tidak ada "
 "volume kunci yang disediakan.\n"
 
-#: lib/setup.c:1455 lib/setup.c:1530 lib/setup.c:1533
+#: lib/setup.c:1360 lib/setup.c:1433 lib/setup.c:1437
 msgid "Enter any passphrase: "
 msgstr "Masukan kata sandi: "
 
-#: lib/setup.c:1474 lib/setup.c:1548 lib/setup.c:1552 lib/setup.c:1605
+#: lib/setup.c:1377 lib/setup.c:1450 lib/setup.c:1454 lib/setup.c:1517
 msgid "Enter new passphrase for key slot: "
 msgstr "Masukan kasa sandi baru untuk slot kunci: "
 
-#: lib/setup.c:1596 lib/setup.c:1796 lib/setup.c:1908
+#: lib/setup.c:1508 lib/setup.c:1769 lib/setup.c:1782 lib/setup.c:1888
 msgid "Volume key does not match the volume.\n"
 msgstr "Kunci volume tidak cocok dengan volume.\n"
 
-#: lib/setup.c:1633
+#: lib/setup.c:1546
 #, c-format
 msgid "Key slot %d is invalid.\n"
 msgstr "Slot kunci %d tidak valid.\n"
 
-#: lib/setup.c:1638
+#: lib/setup.c:1551
 #, c-format
 msgid "Key slot %d is not used.\n"
 msgstr "Slot kunci %d tidak digunakan.\n"
 
-#: lib/setup.c:1823
+#: lib/setup.c:1581 lib/setup.c:1653 lib/setup.c:1745
 #, c-format
-msgid "Device %s is busy.\n"
-msgstr "Perangkat %s sibuk.\n"
+msgid "Device %s already exists.\n"
+msgstr "Perangkat %s telah ada.\n"
 
-#: lib/setup.c:1831
+#: lib/setup.c:1756
+#, fuzzy
+msgid "Incorrect volume key specified for plain device.\n"
+msgstr "Tidak dapat mendapatkan kunci volume untuk perangkat.\n"
+
+#: lib/setup.c:1787
+#, fuzzy
+msgid "Device type is not properly initialised.\n"
+msgstr "Perangkat %s tidak aktif.\n"
+
+#: lib/setup.c:1816
 #, c-format
 msgid "Invalid device %s.\n"
 msgstr "Perangkat %s tidak valid.\n"
 
-#: lib/setup.c:1855
+#: lib/setup.c:1844
 msgid "Volume key buffer too small.\n"
 msgstr "Penyangga kunci volume terlalu kecil.\n"
 
-#: lib/setup.c:1863
+#: lib/setup.c:1852
 msgid "Cannot retrieve volume key for plain device.\n"
 msgstr "Tidak dapat mendapatkan kunci volume untuk perangkat.\n"
 
-#: lib/setup.c:1885
+#: lib/setup.c:1858
 #, c-format
 msgid "This operation is not supported for %s crypt device.\n"
 msgstr "Operasi ini tidak didukung untuk perangkat crypt %s.\n"
 
-#: lib/utils.c:418
-#, c-format
-msgid "Failed to open key file %s.\n"
-msgstr "Gagal membuka berkas kunci %s.\n"
-
-#: lib/utils.c:428
-msgid "Error reading passphrase from terminal.\n"
-msgstr "Kesalahan dalam pembacaan kata sandi dari terminal.\n"
-
-#: lib/utils.c:433
-msgid "Verify passphrase: "
-msgstr "Memverifikasi kata sandi: "
-
-#: lib/utils.c:435
-msgid "Passphrases do not match.\n"
-msgstr "Kata sandi tidak cocok.\n"
-
-#: lib/utils.c:450
-msgid "Can't do passphrase verification on non-tty inputs.\n"
-msgstr "Tidak dapat melakukan verifikasi kata sandi di masukan bukan tty.\n"
-
-#: lib/utils.c:462
-#, c-format
-msgid "Failed to stat key file %s.\n"
-msgstr "Gagal memperoleh data statistik berkas kunci %s.\n"
-
-#: lib/utils.c:466
-#, c-format
-msgid ""
-"Warning: exhausting read requested, but key file %s is not a regular file, "
-"function might never return.\n"
-msgstr ""
-"Peringatan: pembacaan yang melelahkan diminta, tetapi berkas kunci %s bukan "
-"sebuah berkas biasa, fungsi mungkin tidak pernah kembali.\n"
-
-#: lib/utils.c:478
-msgid "Out of memory while reading passphrase.\n"
-msgstr "Kehabisan memori ketika membaca kata sandi.\n"
-
-#: lib/utils.c:485
-msgid "Error reading passphrase.\n"
-msgstr "Kesalahan dalam pembacaan kata sandi.\n"
-
-#: lib/utils.c:523
+#: lib/utils.c:270
 #, c-format
 msgid "Device %s doesn't exist or access denied.\n"
 msgstr "Perangkat %s tidak ada atau akses ditolak.\n"
 
-#: lib/utils.c:530
+#: lib/utils.c:280
 #, c-format
 msgid "Cannot open device %s for %s%s access.\n"
 msgstr "Tidak dapat membuka perangkat %s untuk akses %s%s.\n"
 
-#: lib/utils.c:531
+#: lib/utils.c:281
 msgid "exclusive "
 msgstr "ekslusif "
 
-#: lib/utils.c:532
+#: lib/utils.c:282
 msgid "writable"
 msgstr "dapat-ditulis"
 
-#: lib/utils.c:532
+#: lib/utils.c:282
 msgid "read-only"
 msgstr "baca-saja"
 
-#: lib/utils.c:539
+#: lib/utils.c:289
 #, c-format
 msgid "Cannot read device %s.\n"
 msgstr "Tidak dapat membaca perangkat %s.\n"
 
-#: lib/utils.c:569
+#: lib/utils.c:386
 #, c-format
-msgid "Cannot open device: %s\n"
-msgstr "Tidak dapat membuka perangkat: %s\n"
+msgid "Cannot use device %s which is in use (already mapped or mounted).\n"
+msgstr ""
 
-#: lib/utils.c:579
+#: lib/utils.c:390
 #, c-format
-msgid "BLKROGET failed on device %s.\n"
-msgstr "BLKROGET gagal di perangkat %s.\n"
+msgid "Cannot get info about device %s.\n"
+msgstr "Tidak dapat mendapatkan informasi mengenai perangkat %s.\n"
 
-#: lib/utils.c:604
+#: lib/utils.c:396
 #, c-format
-msgid "BLKGETSIZE failed on device %s.\n"
-msgstr "BLKGETSIZE gagal di perangkat %s.\n"
+msgid "Requested offset is beyond real size of device %s.\n"
+msgstr ""
 
-#: lib/utils.c:652
+#: lib/utils.c:404
+#, c-format
+msgid "Device %s has zero size.\n"
+msgstr "Perangkat %s memiliki ukuran nol.\n"
+
+#: lib/utils.c:415 lib/luks1/keymanage.c:532
+#, c-format
+msgid "Device %s is too small.\n"
+msgstr "Perangkat %s terlalu kecil.\n"
+
+#: lib/utils.c:439
 msgid "WARNING!!! Possibly insecure memory. Are you root?\n"
 msgstr ""
 "PERINGATAN!!! Kemungkinan menggunakan memori tidak aman. Apakah anda root?\n"
 
-#: lib/utils.c:658
+#: lib/utils.c:445
 msgid "Cannot get process priority.\n"
 msgstr "Tidak dapat mendapatkan prioritas proses.\n"
 
-#: lib/utils.c:661 lib/utils.c:674
-#, c-format
-msgid "setpriority %u failed: %s"
+#: lib/utils.c:448 lib/utils.c:461
+#, fuzzy, c-format
+msgid "setpriority %d failed: %s\n"
 msgstr "setpriority %u gagal: %s"
 
-#: lib/utils.c:672
-msgid "Cannot unlock memory."
+#: lib/utils.c:459
+#, fuzzy
+msgid "Cannot unlock memory.\n"
 msgstr "Tidak dapat membuka kunci memori."
 
-#: luks/keyencryption.c:68
+#: lib/utils_crypt.c:221 lib/utils_crypt.c:234 lib/utils_crypt.c:338
+#: lib/utils_crypt.c:354
+msgid "Out of memory while reading passphrase.\n"
+msgstr "Kehabisan memori ketika membaca kata sandi.\n"
+
+#: lib/utils_crypt.c:226 lib/utils_crypt.c:241
+msgid "Error reading passphrase from terminal.\n"
+msgstr "Kesalahan dalam pembacaan kata sandi dari terminal.\n"
+
+#: lib/utils_crypt.c:239
+msgid "Verify passphrase: "
+msgstr "Memverifikasi kata sandi: "
+
+#: lib/utils_crypt.c:246
+msgid "Passphrases do not match.\n"
+msgstr "Kata sandi tidak cocok.\n"
+
+#: lib/utils_crypt.c:287
+msgid "Cannot use offset with terminal input.\n"
+msgstr ""
+
+#: lib/utils_crypt.c:306
+#, fuzzy
+msgid "Failed to open key file.\n"
+msgstr "Gagal membuka berkas kunci %s.\n"
+
+#: lib/utils_crypt.c:315
+#, fuzzy
+msgid "Failed to stat key file.\n"
+msgstr "Gagal memperoleh data statistik berkas kunci %s.\n"
+
+#: lib/utils_crypt.c:323 lib/utils_crypt.c:345
+msgid "Cannot seek to requested keyfile offset.\n"
+msgstr ""
+
+#: lib/utils_crypt.c:362
+msgid "Error reading passphrase.\n"
+msgstr "Kesalahan dalam pembacaan kata sandi.\n"
+
+#: lib/utils_crypt.c:380
+msgid "Maximum keyfile size exceeded.\n"
+msgstr ""
+
+#: lib/utils_crypt.c:385
+#, fuzzy
+msgid "Cannot read requested amount of data.\n"
+msgstr "Tidak dapat membaca berkas cadangan header %s.\n"
+
+#: lib/utils_fips.c:46
+msgid "FIPS checksum verification failed.\n"
+msgstr ""
+
+#: lib/utils_fips.c:50
+msgid "Running in FIPS mode.\n"
+msgstr ""
+
+#: lib/luks1/keyencryption.c:79
 #, c-format
 msgid "Unable to obtain sector size for %s"
 msgstr "Tidak dapat mendapatkan ukuran sektor untuk %s"
 
-#: luks/keyencryption.c:108
+#: lib/luks1/keyencryption.c:106
 #, fuzzy
 msgid "Key size in XTS mode must be 256 or 512 bits.\n"
 msgstr "Kunci harus kelipatan dari 8 bit"
 
-#: luks/keyencryption.c:110
-msgid "Block mode XTS is available since kernel 2.6.24.\n"
-msgstr ""
-
-#: luks/keyencryption.c:112
-#, fuzzy
-msgid "Key size in LRW mode must be 256 or 512 bits.\n"
-msgstr "Kunci harus kelipatan dari 8 bit"
-
-#: luks/keyencryption.c:114
-msgid "Block mode LRW is available since kernel 2.6.20.\n"
-msgstr ""
-
-#: luks/keyencryption.c:137
+#: lib/luks1/keyencryption.c:129
 msgid "Failed to obtain device mapper directory."
 msgstr "Gagal untuk memperoleh direktori pemeta-perangkat."
 
-#: luks/keyencryption.c:153
+#: lib/luks1/keyencryption.c:145
 #, c-format
 msgid ""
 "Failed to setup dm-crypt key mapping for device %s.\n"
@@ -374,60 +397,61 @@ msgstr ""
 "lebih lanjut).\n"
 "%s"
 
-#: luks/keyencryption.c:163
+#: lib/luks1/keyencryption.c:155
 msgid "Failed to open temporary keystore device.\n"
 msgstr "Gagal untuk membuka perangkat penyimpan kunci sementara.\n"
 
-#: luks/keyencryption.c:170
+#: lib/luks1/keyencryption.c:162
 msgid "Failed to access temporary keystore device.\n"
 msgstr "Gagal untuk mengakses perangkat penyimpan kunci sementara.\n"
 
-#: luks/keymanage.c:94
+#: lib/luks1/keymanage.c:149
 #, c-format
 msgid "Requested file %s already exist.\n"
 msgstr "Berkas %s yang diminta telah ada.\n"
 
-#: luks/keymanage.c:114 luks/keymanage.c:257
+#: lib/luks1/keymanage.c:169 lib/luks1/keymanage.c:399
 #, fuzzy, c-format
 msgid "Device %s is not a valid LUKS device.\n"
 msgstr "Perangkat %s bukan perangkat LUKS.\n"
 
-#: luks/keymanage.c:134
+#: lib/luks1/keymanage.c:189
 #, c-format
 msgid "Cannot write header backup file %s.\n"
 msgstr "Tidak dapat menulis berkas cadangan header %s.\n"
 
-#: luks/keymanage.c:161
+#: lib/luks1/keymanage.c:216
 #, c-format
 msgid "Backup file %s doesn't exist.\n"
 msgstr "Berkas cadangan %s tidak ada.\n"
 
-#: luks/keymanage.c:169
-msgid "Backup file do not contain valid LUKS header.\n"
+#: lib/luks1/keymanage.c:224
+#, fuzzy
+msgid "Backup file doesn't contain valid LUKS header.\n"
 msgstr "Berkas cadangan tidak berisi header LUKS yang valid.\n"
 
-#: luks/keymanage.c:182
+#: lib/luks1/keymanage.c:237
 #, c-format
 msgid "Cannot open header backup file %s.\n"
 msgstr "Tidak dapat membuka berkas cadangan header %s.\n"
 
-#: luks/keymanage.c:188
+#: lib/luks1/keymanage.c:243
 #, c-format
 msgid "Cannot read header backup file %s.\n"
 msgstr "Tidak dapat membaca berkas cadangan header %s.\n"
 
-#: luks/keymanage.c:199
+#: lib/luks1/keymanage.c:254
 msgid "Data offset or key size differs on device and backup, restore failed.\n"
 msgstr ""
 "Data offset atau ukuran kunci berbeda di perangkat dan cadangan, "
 "pengembalian gagal.\n"
 
-#: luks/keymanage.c:207
+#: lib/luks1/keymanage.c:262
 #, c-format
 msgid "Device %s %s%s"
 msgstr "Perangkat %s %s%s"
 
-#: luks/keymanage.c:208
+#: lib/luks1/keymanage.c:263
 msgid ""
 "does not contain LUKS header. Replacing header can destroy data on that "
 "device."
@@ -435,7 +459,7 @@ msgstr ""
 "tidak berisi header LUKS. Mengganti header dapat menghancurkan data di "
 "perangkat itu."
 
-#: luks/keymanage.c:209
+#: lib/luks1/keymanage.c:264
 msgid ""
 "already contains LUKS header. Replacing header will destroy existing "
 "keyslots."
@@ -443,7 +467,7 @@ msgstr ""
 "telah berisi header LUKS. Mengganti header dapat mengganti slot kunci yang "
 "telah ada."
 
-#: luks/keymanage.c:210
+#: lib/luks1/keymanage.c:265
 msgid ""
 "\n"
 "WARNING: real device header has different UUID than backup!"
@@ -451,256 +475,391 @@ msgstr ""
 "\n"
 "PERINGATAN: header perangkat ril memiliki UUID berbeda dengan cadangan!"
 
-#: luks/keymanage.c:225 luks/keymanage.c:338 luks/keymanage.c:373
+#: lib/luks1/keymanage.c:280 lib/luks1/keymanage.c:504
+#: lib/luks1/keymanage.c:538
 #, c-format
 msgid "Cannot open device %s.\n"
 msgstr "Tidak dapat membuka perangkat %s.\n"
 
-#: luks/keymanage.c:259
-#, fuzzy, c-format
-msgid "Device %s is not a valid LUKS device."
-msgstr "Perangkat %s bukan perangkat LUKS.\n"
+#: lib/luks1/keymanage.c:310
+msgid "Non standard key size, manual repair required.\n"
+msgstr ""
 
-#: luks/keymanage.c:262
+#: lib/luks1/keymanage.c:315
+msgid "Non standard keyslots alignment, manual repair required.\n"
+msgstr ""
+
+#: lib/luks1/keymanage.c:321
+msgid "Repairing keyslots.\n"
+msgstr ""
+
+#: lib/luks1/keymanage.c:332
+msgid "Repair failed."
+msgstr ""
+
+#: lib/luks1/keymanage.c:344
+#, c-format
+msgid "Keyslot %i: offset repaired (%u -> %u).\n"
+msgstr ""
+
+#: lib/luks1/keymanage.c:352
+#, c-format
+msgid "Keyslot %i: stripes repaired (%u -> %u).\n"
+msgstr ""
+
+#: lib/luks1/keymanage.c:361
+#, c-format
+msgid "Keyslot %i: bogus partition signature.\n"
+msgstr ""
+
+#: lib/luks1/keymanage.c:366
+#, fuzzy, c-format
+msgid "Keyslot %i: salt wiped.\n"
+msgstr "Slot kunci %d tidak valid.\n"
+
+#: lib/luks1/keymanage.c:377
+#, fuzzy
+msgid "Writing LUKS header to disk.\n"
+msgstr "Error selama memperbarui header LUKS di perangkat %s.\n"
+
+#: lib/luks1/keymanage.c:402
 #, c-format
 msgid "Unsupported LUKS version %d.\n"
 msgstr "versi LUKS %d tidak didukung.\n"
 
-#: luks/keymanage.c:265
+#: lib/luks1/keymanage.c:408 lib/luks1/keymanage.c:610
 #, c-format
 msgid "Requested LUKS hash %s is not supported.\n"
 msgstr "Hash %s LUKS yang diminta tidak didukung.\n"
 
-#: luks/keymanage.c:310
+#: lib/luks1/keymanage.c:423
+#, fuzzy, c-format
+msgid "LUKS keyslot %u is invalid.\n"
+msgstr "Slot kunci %d tidak valid.\n"
+
+#: lib/luks1/keymanage.c:437 src/cryptsetup.c:535
+msgid "No known problems detected for LUKS header.\n"
+msgstr ""
+
+#: lib/luks1/keymanage.c:471
 #, c-format
 msgid "Cannot open file %s.\n"
 msgstr "Tidak dapat membuka berkas %s.\n"
 
-#: luks/keymanage.c:350
-#, c-format
-msgid "LUKS header detected but device %s is too small.\n"
-msgstr "Header LUKS terdeteksi tetapi perangkat %s terlalu kecil.\n"
-
-#: luks/keymanage.c:394
+#: lib/luks1/keymanage.c:559
 #, c-format
 msgid "Error during update of LUKS header on device %s.\n"
 msgstr "Error selama memperbarui header LUKS di perangkat %s.\n"
 
-#: luks/keymanage.c:401
+#: lib/luks1/keymanage.c:566
 #, c-format
 msgid "Error re-reading LUKS header after update on device %s.\n"
 msgstr ""
 "Error membaca-kembali header LUKS setelah memperbarui di perangkat %s.\n"
 
-#: luks/keymanage.c:413
+#: lib/luks1/keymanage.c:578
 #, fuzzy, c-format
 msgid "Not compatible PBKDF2 options (using hash algorithm %s).\n"
 msgstr "Pilihan PBKDF2 tidak kompatibel (menggunakan algoritma hash %s)."
 
-#: luks/keymanage.c:461
+#: lib/luks1/keymanage.c:615 lib/luks1/keymanage.c:697
+#, fuzzy
+msgid "Wrong LUKS UUID format provided.\n"
+msgstr "Format UUID yang disediakan berbeda, membuat yang baru.\n"
+
+#: lib/luks1/keymanage.c:640
 msgid "Cannot create LUKS header: reading random salt failed.\n"
 msgstr "Tidak dapat membuat header LUKS: pembacaan garam acak gagal.\n"
 
-#: luks/keymanage.c:478
+#: lib/luks1/keymanage.c:657
 #, c-format
 msgid "Cannot create LUKS header: header digest failed (using hash %s).\n"
 msgstr ""
 "Tidak dapat membuat header LUKS: digest header gagal (menggunakan hash %s).\n"
 
-#: luks/keymanage.c:496
-msgid "Wrong UUID format provided, generating new one.\n"
-msgstr "Format UUID yang disediakan berbeda, membuat yang baru.\n"
-
-#: luks/keymanage.c:523
+#: lib/luks1/keymanage.c:722
 #, c-format
 msgid "Key slot %d active, purge first.\n"
 msgstr "Slot kunci %d aktif, hapus terlebih dahulu.\n"
 
-#: luks/keymanage.c:528
+#: lib/luks1/keymanage.c:727
 #, c-format
 msgid "Key slot %d material includes too few stripes. Header manipulation?\n"
 msgstr ""
 "Slot kunci %d material terdapat terlalu sedikit stripes. Manipulasi header?\n"
 
-#: luks/keymanage.c:587
+#: lib/luks1/keymanage.c:794
 msgid "Failed to write to key storage.\n"
 msgstr "Gagal untuk menulis di penyimpanan kunci.\n"
 
-#: luks/keymanage.c:664
+#: lib/luks1/keymanage.c:879
 msgid "Failed to read from key storage.\n"
 msgstr "Gagal untuk membaca dari penyimpanan kunci.\n"
 
-#: luks/keymanage.c:673
+#: lib/luks1/keymanage.c:889
 #, c-format
 msgid "Key slot %d unlocked.\n"
 msgstr "Slot kunci %d tidak terkunci.\n"
 
-#: luks/keymanage.c:706
+#: lib/luks1/keymanage.c:925 src/cryptsetup.c:732 src/cryptsetup.c:916
 msgid "No key available with this passphrase.\n"
 msgstr "Tidak ada kunci tersedia dengan kata sandi ini.\n"
 
-#: luks/keymanage.c:783
+#: lib/luks1/keymanage.c:943
 #, c-format
 msgid "Key slot %d is invalid, please select keyslot between 0 and %d.\n"
 msgstr "Slot kunci %d tidak valid, mohon pilih slot kunci diantara 0 dan %d.\n"
 
-#: luks/keymanage.c:795
+#: lib/luks1/keymanage.c:957
 #, c-format
 msgid "Cannot wipe device %s.\n"
 msgstr "Tidak dapat menghapus perangkat %s.\n"
 
-#: src/cryptsetup.c:71 src/cryptsetup.c:89
+#: lib/loopaes/loopaes.c:143
+msgid "Detected not yet supported GPG encrypted keyfile.\n"
+msgstr ""
+
+#: lib/loopaes/loopaes.c:144
+msgid "Please use gpg --decrypt <KEYFILE> | cryptsetup --keyfile=- ...\n"
+msgstr ""
+
+#: lib/loopaes/loopaes.c:176
+msgid "Incompatible loop-AES keyfile detected.\n"
+msgstr ""
+
+#: lib/loopaes/loopaes.c:226
+msgid "Kernel doesn't support loop-AES compatible mapping.\n"
+msgstr ""
+
+#: src/cryptsetup.c:105
 msgid "<name> <device>"
 msgstr "<nama> <perangkat>"
 
-#: src/cryptsetup.c:71
+#: src/cryptsetup.c:105
 msgid "create device"
 msgstr "buat perangkat"
 
-#: src/cryptsetup.c:72 src/cryptsetup.c:73 src/cryptsetup.c:74
-#: src/cryptsetup.c:82
+#: src/cryptsetup.c:106 src/cryptsetup.c:107 src/cryptsetup.c:108
+#: src/cryptsetup.c:118 src/cryptsetup.c:125
 msgid "<name>"
 msgstr "<nama>"
 
-#: src/cryptsetup.c:72
+#: src/cryptsetup.c:106
 msgid "remove device"
 msgstr "hapus perangkat"
 
-#: src/cryptsetup.c:73
+#: src/cryptsetup.c:107
 msgid "resize active device"
 msgstr "ubah ukuran perangkat aktif"
 
-#: src/cryptsetup.c:74
+#: src/cryptsetup.c:108
 msgid "show device status"
 msgstr "tampilkan status perangkat"
 
-#: src/cryptsetup.c:75 src/cryptsetup.c:77
-msgid "<device> [<new key file>]"
-msgstr "<perangkat> [<berkas kunci baru>]"
-
-#: src/cryptsetup.c:75
-msgid "formats a LUKS device"
-msgstr "format sebuah perangkat LUKS"
-
-#: src/cryptsetup.c:76
-msgid "<device> <name> "
-msgstr "<perangkat> <nama>"
-
-#: src/cryptsetup.c:76
-msgid "open LUKS device as mapping <name>"
-msgstr "buka perangkat LUKS sebagai pemetaan <nama>"
-
-#: src/cryptsetup.c:77
-msgid "add key to LUKS device"
-msgstr "tambahkan kunci ke perangkat LUKS"
-
-#: src/cryptsetup.c:78
-msgid "<device> [<key file>]"
-msgstr "<perangkat> [<berkas kunci>]"
-
-#: src/cryptsetup.c:78
-msgid "removes supplied key or key file from LUKS device"
-msgstr "hapus kunci yang diberikan atau berkas kunci dari perangkat LUKS"
-
-#: src/cryptsetup.c:79 src/cryptsetup.c:88
-msgid "<device> <key slot>"
-msgstr "<perangkat> <slot kunci>"
-
-#: src/cryptsetup.c:79
-msgid "wipes key with number <key slot> from LUKS device"
-msgstr "hapus kunci dengan nomor <slot kunci> dari perangkat LUKS"
-
-#: src/cryptsetup.c:80 src/cryptsetup.c:81 src/cryptsetup.c:83
-#: src/cryptsetup.c:84 src/cryptsetup.c:85 src/cryptsetup.c:86
-#: src/cryptsetup.c:87
+#: src/cryptsetup.c:109 src/cryptsetup.c:116 src/cryptsetup.c:117
+#: src/cryptsetup.c:119 src/cryptsetup.c:120 src/cryptsetup.c:121
+#: src/cryptsetup.c:122 src/cryptsetup.c:123
 msgid "<device>"
 msgstr "<perangkat>"
 
-#: src/cryptsetup.c:80
+#: src/cryptsetup.c:109
+msgid "try to repair on-disk metadata"
+msgstr ""
+
+#: src/cryptsetup.c:110 src/cryptsetup.c:112
+msgid "<device> [<new key file>]"
+msgstr "<perangkat> [<berkas kunci baru>]"
+
+#: src/cryptsetup.c:110
+msgid "formats a LUKS device"
+msgstr "format sebuah perangkat LUKS"
+
+#: src/cryptsetup.c:111 src/cryptsetup.c:124
+msgid "<device> <name> "
+msgstr "<perangkat> <nama>"
+
+#: src/cryptsetup.c:111
+msgid "open LUKS device as mapping <name>"
+msgstr "buka perangkat LUKS sebagai pemetaan <nama>"
+
+#: src/cryptsetup.c:112
+msgid "add key to LUKS device"
+msgstr "tambahkan kunci ke perangkat LUKS"
+
+#: src/cryptsetup.c:113 src/cryptsetup.c:114
+msgid "<device> [<key file>]"
+msgstr "<perangkat> [<berkas kunci>]"
+
+#: src/cryptsetup.c:113
+msgid "removes supplied key or key file from LUKS device"
+msgstr "hapus kunci yang diberikan atau berkas kunci dari perangkat LUKS"
+
+#: src/cryptsetup.c:114
+#, fuzzy
+msgid "changes supplied key or key file of LUKS device"
+msgstr "hapus kunci yang diberikan atau berkas kunci dari perangkat LUKS"
+
+#: src/cryptsetup.c:115
+msgid "<device> <key slot>"
+msgstr "<perangkat> <slot kunci>"
+
+#: src/cryptsetup.c:115
+msgid "wipes key with number <key slot> from LUKS device"
+msgstr "hapus kunci dengan nomor <slot kunci> dari perangkat LUKS"
+
+#: src/cryptsetup.c:116
 msgid "print UUID of LUKS device"
 msgstr "tampilkan UUID dari perangkat LUKS"
 
-#: src/cryptsetup.c:81
+#: src/cryptsetup.c:117
 msgid "tests <device> for LUKS partition header"
 msgstr "periksa <perangkat> untuk header partisi LUKS"
 
-#: src/cryptsetup.c:82
+#: src/cryptsetup.c:118
 msgid "remove LUKS mapping"
 msgstr "hapus pemetaan LUKS"
 
-#: src/cryptsetup.c:83
+#: src/cryptsetup.c:119
 msgid "dump LUKS partition information"
 msgstr "dump informasi  partisi LUKS"
 
-#: src/cryptsetup.c:84
+#: src/cryptsetup.c:120
 msgid "Suspend LUKS device and wipe key (all IOs are frozen)."
 msgstr "Hentikan perangkat LUKS dan hapus kunci (semua IO dihentikan)."
 
-#: src/cryptsetup.c:85
+#: src/cryptsetup.c:121
 msgid "Resume suspended LUKS device."
 msgstr "Lanjutkan perangkat LUKS yang dihentikan."
 
-#: src/cryptsetup.c:86
+#: src/cryptsetup.c:122
 msgid "Backup LUKS device header and keyslots"
 msgstr "Buat cadangan header perangkat LUKS dan slot kunci"
 
-#: src/cryptsetup.c:87
+#: src/cryptsetup.c:123
 msgid "Restore LUKS device header and keyslots"
 msgstr "Kembalikan header perangkat LUKS dan slot kunci"
 
-#: src/cryptsetup.c:88
-msgid "identical to luksKillSlot - DEPRECATED - see man page"
-msgstr ""
-"identik ke luksKillSlot - DITINGGALKAN - lihat halaman petunjuk penggunaan"
+#: src/cryptsetup.c:124
+#, fuzzy
+msgid "open loop-AES device as mapping <name>"
+msgstr "buka perangkat LUKS sebagai pemetaan <nama>"
 
-#: src/cryptsetup.c:89
-msgid "modify active device - DEPRECATED - see man page"
-msgstr ""
-"modifikasi perangkat aktif - DITINGGALKAN - lihat halaman petunjuk penggunaan"
+#: src/cryptsetup.c:125
+#, fuzzy
+msgid "remove loop-AES mapping"
+msgstr "hapus pemetaan LUKS"
 
-#: src/cryptsetup.c:184
+#: src/cryptsetup.c:218
+msgid "Can't do passphrase verification on non-tty inputs.\n"
+msgstr "Tidak dapat melakukan verifikasi kata sandi di masukan bukan tty.\n"
+
+#: src/cryptsetup.c:233
 msgid "Command successful.\n"
 msgstr "Perintah berhasil.\n"
 
-#: src/cryptsetup.c:198
+#: src/cryptsetup.c:247
 #, c-format
 msgid "Command failed with code %i"
 msgstr "Perintah gagal dengan kode %i"
 
-#: src/cryptsetup.c:226
-msgid ""
-"The reload action is deprecated. Please use \"dmsetup reload\" in case you "
-"really need this functionality.\n"
-"WARNING: do not use reload to touch LUKS devices. If that is the case, hit "
-"Ctrl-C now.\n"
-msgstr ""
-"Aksi muat kembali telah ditinggalkan. Mohon gunakan \"dmsetup reload\" dalam "
-"kasus anda benar benar membutuhkan fungsi ini.\n"
-"PERINGATAN: jangan gunakan muat-kembali untuk menyentuk perangkat LUKS. Jika "
-"itu masalahnya, tekan Ctrl-C sekarang.\n"
+#: src/cryptsetup.c:375
+#, fuzzy
+msgid "Option --key-file is required.\n"
+msgstr "Pilihan --header-backup-file dibutuhkan.\n"
 
-#: src/cryptsetup.c:395
-msgid "Option --key-file takes precedence over specified key file argument.\n"
-msgstr ""
+#: src/cryptsetup.c:539
+#, fuzzy
+msgid "Really try to repair LUKS device header?"
+msgstr "Kembalikan header perangkat LUKS dan slot kunci"
 
-#: src/cryptsetup.c:397
+#: src/cryptsetup.c:564
 #, c-format
 msgid "This will overwrite data on %s irrevocably."
 msgstr "Ini akan memaksa menulis data di %s secara permanen."
 
-#: src/cryptsetup.c:398
+#: src/cryptsetup.c:566
 msgid "memory allocation error in action_luksFormat"
 msgstr "alokasi memori error dalam action_luksFormat"
 
-#: src/cryptsetup.c:428
-msgid "Obsolete option --non-exclusive is ignored.\n"
-msgstr "Pilihan sudah ditinggalkan --no-exclusive diabaikan.\n"
+#: src/cryptsetup.c:578
+msgid "No known cipher specification pattern detected.\n"
+msgstr "Tidak ada pola spesifikasi cipher yang dikenal terdeteksi.\n"
 
-#: src/cryptsetup.c:588 src/cryptsetup.c:610
+#: src/cryptsetup.c:584
+#, c-format
+msgid "Cannot use %s as on-disk header.\n"
+msgstr ""
+
+#: src/cryptsetup.c:599 src/cryptsetup.c:1030
+msgid "Enter LUKS passphrase: "
+msgstr "Masukan kata sandi LUKS: "
+
+#: src/cryptsetup.c:654
+msgid "Reduced data offset is allowed only for detached LUKS header.\n"
+msgstr ""
+
+#: src/cryptsetup.c:755 src/cryptsetup.c:810
+#, fuzzy, c-format
+msgid "Key slot %d selected for deletion.\n"
+msgstr "slot kunci %d terpilih untuk penghapusan.\n"
+
+#: src/cryptsetup.c:758
+#, c-format
+msgid "Key %d not active. Can't wipe.\n"
+msgstr "Kunci %d tidak aktif. Tidak dapat menghapus.\n"
+
+#: src/cryptsetup.c:766 src/cryptsetup.c:813
+msgid ""
+"This is the last keyslot. Device will become unusable after purging this key."
+msgstr ""
+"Ini adalah slot kunci terakhir. Perangkat mungkin akan menjadi tidak stabil "
+"setelah menghapus kunci ini."
+
+#: src/cryptsetup.c:767
+msgid "Enter any remaining LUKS passphrase: "
+msgstr "Masukan kata sandi LUKS yang tersisa: "
+
+#: src/cryptsetup.c:795
+msgid "Enter LUKS passphrase to be deleted: "
+msgstr "Masukan kata sandi LUKS yang akan dihapus: "
+
+#: src/cryptsetup.c:898
+#, fuzzy
+msgid "Enter LUKS passphrase to be changed: "
+msgstr "Masukan kata sandi LUKS yang akan dihapus: "
+
+#: src/cryptsetup.c:935
+#, fuzzy
+msgid "Enter new LUKS passphrase: "
+msgstr "Masukan kata sandi LUKS: "
+
+#: src/cryptsetup.c:949
+#, fuzzy, c-format
+msgid "Key slot %d changed.\n"
+msgstr "Slot kunci %d tidak terkunci.\n"
+
+#: src/cryptsetup.c:955
+#, c-format
+msgid "Replaced with key slot %d.\n"
+msgstr ""
+
+#: src/cryptsetup.c:960
+#, fuzzy
+msgid "Failed to swap new key slot.\n"
+msgstr "Gagal memperoleh data statistik berkas kunci %s.\n"
+
+#: src/cryptsetup.c:1019
+msgid ""
+"LUKS header dump with volume key is sensitive information\n"
+"which allows access to encrypted partition without passphrase.\n"
+"This dump should be always stored encrypted on safe place."
+msgstr ""
+
+#: src/cryptsetup.c:1124 src/cryptsetup.c:1145
 msgid "Option --header-backup-file is required.\n"
 msgstr "Pilihan --header-backup-file dibutuhkan.\n"
 
-#: src/cryptsetup.c:644
+#: src/cryptsetup.c:1183
 msgid ""
 "\n"
 "<action> is one of:\n"
@@ -708,7 +867,7 @@ msgstr ""
 "\n"
 "<aksi> adalah salah satu dari:\n"
 
-#: src/cryptsetup.c:650
+#: src/cryptsetup.c:1189
 #, c-format
 msgid ""
 "\n"
@@ -724,155 +883,323 @@ msgstr ""
 "<berkas kunci> adalah berkas kunci opsional untuk kunci baru untuk aksi "
 "luksAddKey\n"
 
-#: src/cryptsetup.c:657
+#: src/cryptsetup.c:1196
 #, c-format
 msgid ""
 "\n"
+"Default compiled-in keyfile parameters:\n"
+"\tMaximum keyfile size: %dkB, Maximum interactive passphrase length %d "
+"(characters)\n"
+msgstr ""
+
+#: src/cryptsetup.c:1201
+#, fuzzy, c-format
+msgid ""
+"\n"
 "Default compiled-in device cipher parameters:\n"
+"\tloop-AES: %s, Key %d bits\n"
 "\tplain: %s, Key: %d bits, Password hashing: %s\n"
-"\tLUKS1: %s, Key: %d bits, LUKS header hashing: %s\n"
+"\tLUKS1: %s, Key: %d bits, LUKS header hashing: %s, RNG: %s\n"
 msgstr ""
 "\n"
 "Parameter baku yang terkompilasi dalam perangkat penyandi:\n"
 "\tterbuka: %s, Kunci: %d bits, Hash kata sandi : %s\n"
 "\tLUKS1  : %s, Kunci: %d bits, Hash kepala LUKS: %s\n"
 
-#: src/cryptsetup.c:704
+#: src/cryptsetup.c:1269
 msgid "Show this help message"
 msgstr "Tampilkan pesan bantuan ini"
 
-#: src/cryptsetup.c:705
+#: src/cryptsetup.c:1270
 msgid "Display brief usage"
 msgstr "Tampilkan penggunaan singkat"
 
-#: src/cryptsetup.c:709
+#: src/cryptsetup.c:1274
 msgid "Help options:"
 msgstr "Pilihan bantuan:"
 
-#: src/cryptsetup.c:710
-msgid "Shows more detailed error messages"
-msgstr "Tampilkan pesan kesalahan secara lebih detail"
-
-#: src/cryptsetup.c:711
-msgid "Show debug messages"
-msgstr "Tampilkan pesan penelusuran"
-
-#: src/cryptsetup.c:712
-msgid "The cipher used to encrypt the disk (see /proc/crypto)"
-msgstr "Cipher yang digunakan untuk mengenkripsi ke disk (lihat /proc/crypto)"
-
-#: src/cryptsetup.c:713
-msgid "The hash used to create the encryption key from the passphrase"
-msgstr "Hash yang digunakan untuk membuat kunci enkripsi dari kata sandi"
-
-#: src/cryptsetup.c:714
-msgid "Verifies the passphrase by asking for it twice"
-msgstr "Verifikasi kata sandi dengan menanyakan itu dua kali"
-
-#: src/cryptsetup.c:715
-msgid "Read the key from a file (can be /dev/random)"
-msgstr "Baca kunci dari sebuah berkas (dapat berupa /dev/random)"
-
-#: src/cryptsetup.c:716
-msgid "Read the volume (master) key from file."
-msgstr "Baca volume (master) kunci dari berkas."
-
-#: src/cryptsetup.c:717
-msgid "The size of the encryption key"
-msgstr "Besar dari kunci enkripsi"
-
-#: src/cryptsetup.c:717
-msgid "BITS"
-msgstr "BITS"
-
-#: src/cryptsetup.c:718
-msgid "Slot number for new key (default is first free)"
-msgstr "Nomor slot untuk kunci baru (baku adalah yang kosong pertama)"
-
-#: src/cryptsetup.c:719
-msgid "The size of the device"
-msgstr "Besar dari perangkat"
-
-#: src/cryptsetup.c:719 src/cryptsetup.c:720 src/cryptsetup.c:721
-#: src/cryptsetup.c:728
-msgid "SECTORS"
-msgstr "SEKTOR"
-
-#: src/cryptsetup.c:720
-msgid "The start offset in the backend device"
-msgstr "Awal ofset dalam perangkat backend"
-
-#: src/cryptsetup.c:721
-msgid "How many sectors of the encrypted data to skip at the beginning"
-msgstr "Berapa banyak sektor dari data terenkripsi yang dilewatkan di awal"
-
-#: src/cryptsetup.c:722
-msgid "Create a readonly mapping"
-msgstr "Buat pemetaan baca-saja"
-
-#: src/cryptsetup.c:723
-msgid "PBKDF2 iteration time for LUKS (in ms)"
-msgstr "waktu iterasi PBKDF2 untuk LUKS (dalam mdet)"
-
-#: src/cryptsetup.c:723
-msgid "msecs"
-msgstr "mdetik"
-
-#: src/cryptsetup.c:724
-msgid "Do not ask for confirmation"
-msgstr "Jangan tanya untuk konfirmasi"
-
-#: src/cryptsetup.c:725
+#: src/cryptsetup.c:1275
 msgid "Print package version"
 msgstr "Tampilkan versi paket"
 
-#: src/cryptsetup.c:726
+#: src/cryptsetup.c:1276
+msgid "Shows more detailed error messages"
+msgstr "Tampilkan pesan kesalahan secara lebih detail"
+
+#: src/cryptsetup.c:1277
+msgid "Show debug messages"
+msgstr "Tampilkan pesan penelusuran"
+
+#: src/cryptsetup.c:1278
+msgid "The cipher used to encrypt the disk (see /proc/crypto)"
+msgstr "Cipher yang digunakan untuk mengenkripsi ke disk (lihat /proc/crypto)"
+
+#: src/cryptsetup.c:1279
+msgid "The hash used to create the encryption key from the passphrase"
+msgstr "Hash yang digunakan untuk membuat kunci enkripsi dari kata sandi"
+
+#: src/cryptsetup.c:1280
+msgid "Verifies the passphrase by asking for it twice"
+msgstr "Verifikasi kata sandi dengan menanyakan itu dua kali"
+
+#: src/cryptsetup.c:1281
+#, fuzzy
+msgid "Read the key from a file."
+msgstr "Baca volume (master) kunci dari berkas."
+
+#: src/cryptsetup.c:1282
+msgid "Read the volume (master) key from file."
+msgstr "Baca volume (master) kunci dari berkas."
+
+#: src/cryptsetup.c:1283
+msgid "Dump volume (master) key instead of keyslots info."
+msgstr ""
+
+#: src/cryptsetup.c:1284
+msgid "The size of the encryption key"
+msgstr "Besar dari kunci enkripsi"
+
+#: src/cryptsetup.c:1284
+msgid "BITS"
+msgstr "BITS"
+
+#: src/cryptsetup.c:1285
+msgid "Limits the read from keyfile"
+msgstr ""
+
+#: src/cryptsetup.c:1285 src/cryptsetup.c:1286 src/cryptsetup.c:1287
+#: src/cryptsetup.c:1288
+msgid "bytes"
+msgstr ""
+
+#: src/cryptsetup.c:1286
+msgid "Number of bytes to skip in keyfile"
+msgstr ""
+
+#: src/cryptsetup.c:1287
+msgid "Limits the read from newly added keyfile"
+msgstr ""
+
+#: src/cryptsetup.c:1288
+msgid "Number of bytes to skip in newly added keyfile"
+msgstr ""
+
+#: src/cryptsetup.c:1289
+msgid "Slot number for new key (default is first free)"
+msgstr "Nomor slot untuk kunci baru (baku adalah yang kosong pertama)"
+
+#: src/cryptsetup.c:1290
+msgid "The size of the device"
+msgstr "Besar dari perangkat"
+
+#: src/cryptsetup.c:1290 src/cryptsetup.c:1291 src/cryptsetup.c:1292
+#: src/cryptsetup.c:1298
+msgid "SECTORS"
+msgstr "SEKTOR"
+
+#: src/cryptsetup.c:1291
+msgid "The start offset in the backend device"
+msgstr "Awal ofset dalam perangkat backend"
+
+#: src/cryptsetup.c:1292
+msgid "How many sectors of the encrypted data to skip at the beginning"
+msgstr "Berapa banyak sektor dari data terenkripsi yang dilewatkan di awal"
+
+#: src/cryptsetup.c:1293
+msgid "Create a readonly mapping"
+msgstr "Buat pemetaan baca-saja"
+
+#: src/cryptsetup.c:1294
+msgid "PBKDF2 iteration time for LUKS (in ms)"
+msgstr "waktu iterasi PBKDF2 untuk LUKS (dalam mdet)"
+
+#: src/cryptsetup.c:1294
+msgid "msecs"
+msgstr "mdetik"
+
+#: src/cryptsetup.c:1295
+msgid "Do not ask for confirmation"
+msgstr "Jangan tanya untuk konfirmasi"
+
+#: src/cryptsetup.c:1296
 msgid "Timeout for interactive passphrase prompt (in seconds)"
 msgstr "Waktu habis untuk pertanyaan interaktif kata sandi (dalam detik)"
 
-#: src/cryptsetup.c:726
+#: src/cryptsetup.c:1296
 msgid "secs"
 msgstr "detik"
 
-#: src/cryptsetup.c:727
+#: src/cryptsetup.c:1297
 msgid "How often the input of the passphrase can be retried"
 msgstr "Seberapa sering masukan dari kata sandi dapat dicoba"
 
-#: src/cryptsetup.c:728
+#: src/cryptsetup.c:1298
 msgid "Align payload at <n> sector boundaries - for luksFormat"
 msgstr "Sesuaikan muatan di batas sektor <n> - untuk luksFormat"
 
-#: src/cryptsetup.c:729
-msgid "(Obsoleted, see man page.)"
-msgstr "(Ditinggalkan, lihat halaman petunjuk penggunaan.)"
-
-#: src/cryptsetup.c:730
+#: src/cryptsetup.c:1299
 msgid "File with LUKS header and keyslots backup."
 msgstr "Berkas dengan header LUKS dan cadangan slot kunci."
 
-#: src/cryptsetup.c:748
+#: src/cryptsetup.c:1300
+msgid "Use /dev/random for generating volume key."
+msgstr ""
+
+#: src/cryptsetup.c:1301
+msgid "Use /dev/urandom for generating volume key."
+msgstr ""
+
+#: src/cryptsetup.c:1302
+msgid "Share device with another non-overlapping crypt segment."
+msgstr ""
+
+#: src/cryptsetup.c:1303
+#, fuzzy
+msgid "UUID for device to use."
+msgstr "DM-UUID untuk perangkat %s telah terpotong.\n"
+
+#: src/cryptsetup.c:1304
+msgid "Allow discards (aka TRIM) requests for device."
+msgstr ""
+
+#: src/cryptsetup.c:1305
+msgid "Device or file with separated LUKS header."
+msgstr ""
+
+#: src/cryptsetup.c:1324
 msgid "[OPTION...] <action> <action-specific>]"
 msgstr "[PILIHAN...] <aksi> <aksi-spesifik>]"
 
-#: src/cryptsetup.c:784
-msgid "Key size must be a multiple of 8 bits"
-msgstr "Kunci harus kelipatan dari 8 bit"
-
-#: src/cryptsetup.c:788
+#: src/cryptsetup.c:1364
 msgid "Argument <action> missing."
 msgstr "Argumen <aksi> hilang."
 
-#: src/cryptsetup.c:794
+#: src/cryptsetup.c:1370
 msgid "Unknown action."
 msgstr "Aksi tidak diketahui."
 
-#: src/cryptsetup.c:809
+#: src/cryptsetup.c:1385
 #, c-format
 msgid "%s: requires %s as arguments"
 msgstr "%s: membutuhkan %s sebagai argumen"
+
+#: src/cryptsetup.c:1394
+msgid "Option --shared is allowed only for create operation.\n"
+msgstr ""
+
+#: src/cryptsetup.c:1403
+msgid ""
+"Option --allow-discards is allowed only for luksOpen, loopaesOpen and create "
+"operation.\n"
+msgstr ""
+
+#: src/cryptsetup.c:1412
+msgid ""
+"Option --key-size is allowed only for luksFormat, create and loopaesOpen.\n"
+"To limit read from keyfile use --keyfile-size=(bytes)."
+msgstr ""
+
+#: src/cryptsetup.c:1419
+msgid "Key size must be a multiple of 8 bits"
+msgstr "Kunci harus kelipatan dari 8 bit"
+
+#: src/cryptsetup.c:1426
+#, fuzzy
+msgid "Key slot is invalid."
+msgstr "Slot kunci %d tidak valid.\n"
+
+#: src/cryptsetup.c:1433
+msgid "Option --key-file takes precedence over specified key file argument.\n"
+msgstr ""
+
+#: src/cryptsetup.c:1441
+msgid "Negative number for option not permitted."
+msgstr ""
+
+#: src/cryptsetup.c:1446
+msgid "Only one of --use-[u]random options is allowed."
+msgstr ""
+
+#: src/cryptsetup.c:1450
+msgid "Option --use-[u]random is allowed only for luksFormat."
+msgstr ""
+
+#: src/cryptsetup.c:1454
+msgid "Option --uuid is allowed only for luksFormat and luksUUID."
+msgstr ""
+
+#: src/cryptsetup.c:1458
+msgid "Option --align-payload is allowed only for luksFormat."
+msgstr ""
+
+#: src/cryptsetup.c:1463
+msgid "Option --skip is supported only for create and loopaesOpen commands.\n"
+msgstr ""
+
+#: src/cryptsetup.c:1468
+msgid ""
+"Option --offset is supported only for create and loopaesOpen commands.\n"
+msgstr ""
+
+#~ msgid "Cannot not read %d bytes from key file %s.\n"
+#~ msgstr "Tidak dapat membaca %d bytes dari berkas kunci %s.\n"
+
+#~ msgid "Key slot %d verified.\n"
+#~ msgstr "Slot kunci %d telah terverifikasi.\n"
+
+#~ msgid "Invalid key size %d.\n"
+#~ msgstr "Besar kunci %d tidak valid.\n"
+
+#~ msgid "Device %s is busy.\n"
+#~ msgstr "Perangkat %s sibuk.\n"
+
+#~ msgid ""
+#~ "Warning: exhausting read requested, but key file %s is not a regular "
+#~ "file, function might never return.\n"
+#~ msgstr ""
+#~ "Peringatan: pembacaan yang melelahkan diminta, tetapi berkas kunci %s "
+#~ "bukan sebuah berkas biasa, fungsi mungkin tidak pernah kembali.\n"
+
+#~ msgid "Cannot open device: %s\n"
+#~ msgstr "Tidak dapat membuka perangkat: %s\n"
+
+#~ msgid "BLKROGET failed on device %s.\n"
+#~ msgstr "BLKROGET gagal di perangkat %s.\n"
+
+#~ msgid "BLKGETSIZE failed on device %s.\n"
+#~ msgstr "BLKGETSIZE gagal di perangkat %s.\n"
 
 #~ msgid "%s is not LUKS device.\n"
 #~ msgstr "%s bukan perangkat LUKS.\n"
 
 #~ msgid "%s is not LUKS device."
 #~ msgstr "%s bukan perangkat LUKS."
+
+#~ msgid "identical to luksKillSlot - DEPRECATED - see man page"
+#~ msgstr ""
+#~ "identik ke luksKillSlot - DITINGGALKAN - lihat halaman petunjuk penggunaan"
+
+#~ msgid "modify active device - DEPRECATED - see man page"
+#~ msgstr ""
+#~ "modifikasi perangkat aktif - DITINGGALKAN - lihat halaman petunjuk "
+#~ "penggunaan"
+
+#~ msgid ""
+#~ "The reload action is deprecated. Please use \"dmsetup reload\" in case "
+#~ "you really need this functionality.\n"
+#~ "WARNING: do not use reload to touch LUKS devices. If that is the case, "
+#~ "hit Ctrl-C now.\n"
+#~ msgstr ""
+#~ "Aksi muat kembali telah ditinggalkan. Mohon gunakan \"dmsetup reload\" "
+#~ "dalam kasus anda benar benar membutuhkan fungsi ini.\n"
+#~ "PERINGATAN: jangan gunakan muat-kembali untuk menyentuk perangkat LUKS. "
+#~ "Jika itu masalahnya, tekan Ctrl-C sekarang.\n"
+
+#~ msgid "Obsolete option --non-exclusive is ignored.\n"
+#~ msgstr "Pilihan sudah ditinggalkan --no-exclusive diabaikan.\n"
+
+#~ msgid "Read the key from a file (can be /dev/random)"
+#~ msgstr "Baca kunci dari sebuah berkas (dapat berupa /dev/random)"
+
+#~ msgid "(Obsoleted, see man page.)"
+#~ msgstr "(Ditinggalkan, lihat halaman petunjuk penggunaan.)"

@@ -1,3 +1,24 @@
+/*
+ * utils - miscellaneous device utilities for cryptsetup
+ *
+ * Copyright (C) 2004, Christophe Saout <christophe@saout.de>
+ * Copyright (C) 2004-2007, Clemens Fruhwirth <clemens@endorphin.org>
+ * Copyright (C) 2009-2012, Red Hat, Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -11,126 +32,20 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
-#include <termios.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
 
 #include "libcryptsetup.h"
 #include "internal.h"
 
-struct safe_allocation {
-	size_t	size;
-	char	data[1];
-};
-
-static char *error=NULL;
-
-void set_error_va(const char *fmt, va_list va)
-{
-	int r;
-
-	if(error) {
-		free(error);
-		error = NULL;
-	}
-
-	if(!fmt) return;
-
-	r = vasprintf(&error, fmt, va);
-	if (r < 0) {
-		free(error);
-		error = NULL;
-		return;
-	}
-
-	if (r && error[r - 1] == '\n')
-		error[r - 1] = '\0';
-}
-
-void set_error(const char *fmt, ...)
-{
-	va_list va;
-
-	va_start(va, fmt);
-	set_error_va(fmt, va);
-	va_end(va);
-}
-
-const char *get_error(void)
-{
-	return error;
-}
-
-void *safe_alloc(size_t size)
-{
-	struct safe_allocation *alloc;
-
-	if (!size)
-		return NULL;
-
-	alloc = malloc(size + offsetof(struct safe_allocation, data));
-	if (!alloc)
-		return NULL;
-
-	alloc->size = size;
-
-	return &alloc->data;
-}
-
-void safe_free(void *data)
-{
-	struct safe_allocation *alloc;
-
-	if (!data)
-		return;
-
-	alloc = data - offsetof(struct safe_allocation, data);
-
-	memset(data, 0, alloc->size);
-
-	alloc->size = 0x55aa55aa;
-	free(alloc);
-}
-
-void *safe_realloc(void *data, size_t size)
-{
-	void *new_data;
-
-	new_data = safe_alloc(size);
-
-	if (new_data && data) {
-		struct safe_allocation *alloc;
-
-		alloc = data - offsetof(struct safe_allocation, data);
-
-		if (size > alloc->size)
-			size = alloc->size;
-
-		memcpy(new_data, data, size);
-	}
-
-	safe_free(data);
-	return new_data;
-}
-
-char *safe_strdup(const char *s)
-{
-	char *s2 = safe_alloc(strlen(s) + 1);
-
-	if (!s2)
-		return NULL;
-
-	return strcpy(s2, s);
-}
-
 static int get_alignment(int fd)
 {
-	int alignment = DEFAULT_ALIGNMENT;
+	int alignment = DEFAULT_MEM_ALIGNMENT;
 
 #ifdef _PC_REC_XFER_ALIGN
 	alignment = fpathconf(fd, _PC_REC_XFER_ALIGN);
 	if (alignment < 0)
-		alignment = DEFAULT_ALIGNMENT;
+		alignment = DEFAULT_MEM_ALIGNMENT;
 #endif
 	return alignment;
 }
@@ -153,6 +68,24 @@ static void *aligned_malloc(void **base, int size, int alignment)
 	return ptr;
 #endif
 }
+
+int device_read_ahead(const char *dev, uint32_t *read_ahead)
+{
+	int fd, r = 0;
+	long read_ahead_long;
+
+	if ((fd = open(dev, O_RDONLY)) < 0)
+		return 0;
+
+	r = ioctl(fd, BLKRAGET, &read_ahead_long) ? 0 : 1;
+	close(fd);
+
+	if (r)
+		*read_ahead = (uint32_t) read_ahead_long;
+
+	return r;
+}
+
 static int sector_size(int fd) 
 {
 	int bsize;
@@ -173,7 +106,7 @@ int sector_size_for_device(const char *device)
 	return r;
 }
 
-ssize_t write_blockwise(int fd, const void *orig_buf, size_t count)
+ssize_t write_blockwise(int fd, void *orig_buf, size_t count)
 {
 	void *hangover_buf, *hangover_buf_base = NULL;
 	void *buf, *buf_base = NULL;
@@ -193,7 +126,7 @@ ssize_t write_blockwise(int fd, const void *orig_buf, size_t count)
 			goto out;
 		memcpy(buf, orig_buf, count);
 	} else
-		buf = (void *)orig_buf;
+		buf = orig_buf;
 
 	r = write(fd, buf, solid);
 	if (r < 0 || r != solid)
@@ -205,26 +138,28 @@ ssize_t write_blockwise(int fd, const void *orig_buf, size_t count)
 			goto out;
 
 		r = read(fd, hangover_buf, bsize);
-		if(r < 0 || r != bsize) goto out;
+		if (r < 0 || r != bsize)
+			goto out;
 
 		r = lseek(fd, -bsize, SEEK_CUR);
 		if (r < 0)
 			goto out;
-		memcpy(hangover_buf, buf + solid, hangover);
+		memcpy(hangover_buf, (char*)buf + solid, hangover);
 
 		r = write(fd, hangover_buf, bsize);
-		if(r < 0 || r != bsize) goto out;
-		free(hangover_buf_base);
+		if (r < 0 || r != bsize)
+			goto out;
 	}
 	ret = count;
- out:
+out:
+	free(hangover_buf_base);
 	if (buf != orig_buf)
 		free(buf_base);
 	return ret;
 }
 
 ssize_t read_blockwise(int fd, void *orig_buf, size_t count) {
-	void *hangover_buf, *hangover_buf_base;
+	void *hangover_buf, *hangover_buf_base = NULL;
 	void *buf, *buf_base = NULL;
 	int r, hangover, solid, bsize, alignment;
 	ssize_t ret = -1;
@@ -239,7 +174,7 @@ ssize_t read_blockwise(int fd, void *orig_buf, size_t count) {
 	if ((long)orig_buf & (alignment - 1)) {
 		buf = aligned_malloc(&buf_base, count, alignment);
 		if (!buf)
-			goto out;
+			return -1;
 	} else
 		buf = orig_buf;
 
@@ -255,11 +190,11 @@ ssize_t read_blockwise(int fd, void *orig_buf, size_t count) {
 		if (r <  0 || r != bsize)
 			goto out;
 
-		memcpy(buf + solid, hangover_buf, hangover);
-		free(hangover_buf_base);
+		memcpy((char *)buf + solid, hangover_buf, hangover);
 	}
 	ret = count;
- out:
+out:
+	free(hangover_buf_base);
 	if (buf != orig_buf) {
 		memcpy(orig_buf, buf, count);
 		free(buf_base);
@@ -267,262 +202,77 @@ ssize_t read_blockwise(int fd, void *orig_buf, size_t count) {
 	return ret;
 }
 
-/* 
+/*
  * Combines llseek with blockwise write. write_blockwise can already deal with short writes
  * but we also need a function to deal with short writes at the start. But this information
- * is implicitly included in the read/write offset, which can not be set to non-aligned 
+ * is implicitly included in the read/write offset, which can not be set to non-aligned
  * boundaries. Hence, we combine llseek with write.
  */
+ssize_t write_lseek_blockwise(int fd, char *buf, size_t count, off_t offset) {
+	char *frontPadBuf;
+	void *frontPadBuf_base = NULL;
+	int r, bsize, frontHang;
+	size_t innerCount = 0;
+	ssize_t ret = -1;
 
-ssize_t write_lseek_blockwise(int fd, const char *buf, size_t count, off_t offset) {
-	int bsize = sector_size(fd);
-	const char *orig_buf = buf;
-	char frontPadBuf[bsize];
-	int frontHang = offset % bsize;
-	int r;
-	int innerCount = count < bsize ? count : bsize;
-
-	if (bsize < 0)
+	if ((bsize = sector_size(fd)) < 0)
 		return bsize;
 
-	lseek(fd, offset - frontHang, SEEK_SET);
-	if(offset % bsize) {
-		r = read(fd,frontPadBuf,bsize);
-		if(r < 0) return -1;
+	frontHang = offset % bsize;
 
-		memcpy(frontPadBuf+frontHang, buf, innerCount);
+	if (lseek(fd, offset - frontHang, SEEK_SET) < 0)
+		goto out;
 
-		lseek(fd, offset - frontHang, SEEK_SET);
-		r = write(fd,frontPadBuf,bsize);
-		if(r < 0) return -1;
+	if (frontHang) {
+		frontPadBuf = aligned_malloc(&frontPadBuf_base,
+					     bsize, get_alignment(fd));
+		if (!frontPadBuf)
+			goto out;
+
+		r = read(fd, frontPadBuf, bsize);
+		if (r < 0 || r != bsize)
+			goto out;
+
+		innerCount = bsize - frontHang;
+		if (innerCount > count)
+			innerCount = count;
+
+		memcpy(frontPadBuf + frontHang, buf, innerCount);
+
+		if (lseek(fd, offset - frontHang, SEEK_SET) < 0)
+			goto out;
+
+		r = write(fd, frontPadBuf, bsize);
+		if (r < 0 || r != bsize)
+			goto out;
 
 		buf += innerCount;
 		count -= innerCount;
 	}
-	if(count <= 0) return buf - orig_buf;
 
-	return write_blockwise(fd, buf, count) + innerCount;
-}
+	ret = count ? write_blockwise(fd, buf, count) : 0;
+	if (ret >= 0)
+		ret += innerCount;
+out:
+	free(frontPadBuf_base);
 
-/* Password reading helpers */
-
-static int untimed_read(int fd, char *pass, size_t maxlen)
-{
-	ssize_t i;
-
-	i = read(fd, pass, maxlen);
-	if (i > 0) {
-		pass[i-1] = '\0';
-		i = 0;
-	} else if (i == 0) { /* EOF */
-		*pass = 0;
-		i = -1;
-	}
-	return i;
-}
-
-static int timed_read(int fd, char *pass, size_t maxlen, long timeout)
-{
-	struct timeval t;
-	fd_set fds;
-	int failed = -1;
-
-	FD_ZERO(&fds);
-	FD_SET(fd, &fds);
-	t.tv_sec = timeout;
-	t.tv_usec = 0;
-
-	if (select(fd+1, &fds, NULL, NULL, &t) > 0)
-		failed = untimed_read(fd, pass, maxlen);
-
-	return failed;
-}
-
-static int interactive_pass(const char *prompt, char *pass, size_t maxlen,
-		long timeout)
-{
-	struct termios orig, tmp;
-	int failed = -1;
-	int infd = STDIN_FILENO, outfd;
-
-	if (maxlen < 1)
-		goto out_err;
-
-	/* Read and write to /dev/tty if available */
-	if ((infd = outfd = open("/dev/tty", O_RDWR)) == -1) {
-		infd = STDIN_FILENO;
-		outfd = STDERR_FILENO;
-	}
-
-	if (tcgetattr(infd, &orig))
-		goto out_err;
-
-	memcpy(&tmp, &orig, sizeof(tmp));
-	tmp.c_lflag &= ~ECHO;
-
-	if (write(outfd, prompt, strlen(prompt)) < 0)
-		goto out_err;
-
-	tcsetattr(infd, TCSAFLUSH, &tmp);
-	if (timeout)
-		failed = timed_read(infd, pass, maxlen, timeout);
-	else
-		failed = untimed_read(infd, pass, maxlen);
-	tcsetattr(infd, TCSAFLUSH, &orig);
-
-out_err:
-	if (!failed && write(outfd, "\n", 1));
-
-	if (infd != STDIN_FILENO)
-		close(infd);
-	return failed;
-}
-
-/*
- * Password reading behaviour matrix of get_key
- * FIXME: rewrite this from scratch.
- *                    p   v   n   h
- * -----------------+---+---+---+---
- * interactive      | Y | Y | Y | Inf
- * from fd          | N | N | Y | Inf
- * from binary file | N | N | N | Inf or options->key_size
- *
- * Legend: p..prompt, v..can verify, n..newline-stop, h..read horizon
- *
- * Note: --key-file=- is interpreted as a read from a binary file (stdin)
- */
-
-void get_key(char *prompt, char **key, unsigned int *passLen, int key_size,
-            const char *key_file, int timeout, int how2verify,
-	    struct crypt_device *cd)
-{
-	int fd = -1;
-	const int verify = how2verify & CRYPT_FLAG_VERIFY;
-	const int verify_if_possible = how2verify & CRYPT_FLAG_VERIFY_IF_POSSIBLE;
-	char *pass = NULL;
-	int read_horizon;
-	int regular_file = 0;
-	int read_stdin;
-	int r;
-	struct stat st;
-
-	/* Passphrase read from stdin? */
-	read_stdin = (!key_file || !strcmp(key_file, "-")) ? 1 : 0;
-
-	/* read_horizon applies only for real keyfile, not stdin or terminal */
-	read_horizon = (key_file && !read_stdin) ? key_size : 0 /* until EOF */;
-
-	/* Setup file descriptior */
-	fd = read_stdin ? STDIN_FILENO : open(key_file, O_RDONLY);
-	if (fd < 0) {
-		log_err(cd, _("Failed to open key file %s.\n"), key_file ?: "-");
-		goto out_err;
-	}
-
-	/* Interactive case */
-	if(isatty(fd)) {
-		int i;
-
-		pass = safe_alloc(MAX_TTY_PASSWORD_LEN);
-		if (!pass || (i = interactive_pass(prompt, pass, MAX_TTY_PASSWORD_LEN, timeout))) {
-			log_err(cd, _("Error reading passphrase from terminal.\n"));
-			goto out_err;
-		}
-		if (verify || verify_if_possible) {
-			char pass_verify[MAX_TTY_PASSWORD_LEN];
-			i = interactive_pass(_("Verify passphrase: "), pass_verify, sizeof(pass_verify), timeout);
-			if (i || strcmp(pass, pass_verify) != 0) {
-				log_err(cd, _("Passphrases do not match.\n"));
-				goto out_err;
-			}
-			memset(pass_verify, 0, sizeof(pass_verify));
-		}
-		*passLen = strlen(pass);
-		*key = pass;
-	} else {
-		/* 
-		 * This is either a fd-input or a file, in neither case we can verify the input,
-		 * however we don't stop on new lines if it's a binary file.
-		 */
-		int buflen, i;
-
-		if(verify) {
-			log_err(cd, _("Can't do passphrase verification on non-tty inputs.\n"));
-			goto out_err;
-		}
-		/* The following for control loop does an exhausting
-		 * read on the key material file, if requested with
-		 * key_size == 0, as it's done by LUKS. However, we
-		 * should warn the user, if it's a non-regular file,
-		 * such as /dev/random, because in this case, the loop
-		 * will read forever.
-		 */
-		if(!read_stdin && read_horizon == 0) {
-			if(stat(key_file, &st) < 0) {
-				log_err(cd, _("Failed to stat key file %s.\n"), key_file);
-				goto out_err;
-			}
-			if(!S_ISREG(st.st_mode))
-				log_std(cd, _("Warning: exhausting read requested, but key file %s"
-					" is not a regular file, function might never return.\n"),
-					key_file);
-			else
-				regular_file = 1;
-		}
-		buflen = 0;
-		for(i = 0; read_horizon == 0 || i < read_horizon; i++) {
-			if(i >= buflen - 1) {
-				buflen += 128;
-				pass = safe_realloc(pass, buflen);
-				if (!pass) {
-					log_err(cd, _("Out of memory while reading passphrase.\n"));
-					goto out_err;
-				}
-			}
-
-			r = read(fd, pass + i, 1);
-			if (r < 0) {
-				log_err(cd, _("Error reading passphrase.\n"));
-				goto out_err;
-			}
-
-			/* Stop on newline only if not requested read from keyfile */
-			if(r == 0 || (!key_file && pass[i] == '\n'))
-				break;
-		}
-		/* Fail if piped input dies reading nothing */
-		if(!i && !regular_file) {
-			log_dbg("Error reading passphrase.");
-			goto out_err;
-		}
-		pass[i] = 0;
-		*key = pass;
-		*passLen = i;
-	}
-	if(fd != STDIN_FILENO)
-		close(fd);
-	return;
-
-out_err:
-	if(fd >= 0 && fd != STDIN_FILENO)
-		close(fd);
-	if(pass)
-		safe_free(pass);
-	*key = NULL;
-	*passLen = 0;
+	return ret;
 }
 
 int device_ready(struct crypt_device *cd, const char *device, int mode)
 {
-	int devfd, r = 1;
+	int devfd, r = 0;
 	ssize_t s;
 	struct stat st;
 	char buf[512];
 
 	if(stat(device, &st) < 0) {
 		log_err(cd, _("Device %s doesn't exist or access denied.\n"), device);
-		return 0;
+		return -EINVAL;
 	}
+
+	if (!S_ISBLK(st.st_mode))
+		return -ENOTBLK;
 
 	log_dbg("Trying to open and read device %s.", device);
 	devfd = open(device, mode | O_DIRECT | O_SYNC);
@@ -530,14 +280,14 @@ int device_ready(struct crypt_device *cd, const char *device, int mode)
 		log_err(cd, _("Cannot open device %s for %s%s access.\n"), device,
 			(mode & O_EXCL) ? _("exclusive ") : "",
 			(mode & O_RDWR) ? _("writable") : _("read-only"));
-		return 0;
+		return -EINVAL;
 	}
 
 	 /* Try to read first sector */
 	s = read_blockwise(devfd, buf, sizeof(buf));
 	if (s < 0 || s != sizeof(buf)) {
-		log_err(cd, _("Cannot read device %s.\n"), device);
-		r = 0;
+		log_verbose(cd, _("Cannot read device %s.\n"), device);
+		r = -EIO;
 	}
 
 	memset(buf, 0, sizeof(buf));
@@ -546,95 +296,132 @@ int device_ready(struct crypt_device *cd, const char *device, int mode)
 	return r;
 }
 
-int get_device_infos(const char *device, struct device_infos *infos, struct crypt_device *cd)
+int device_size(const char *device, uint64_t *size)
 {
-	uint64_t size;
+	int devfd, r = 0;
+
+	devfd = open(device, O_RDONLY);
+	if(devfd == -1)
+		return -EINVAL;
+
+	if (ioctl(devfd, BLKGETSIZE64, size) < 0)
+		r = -EINVAL;
+
+	close(devfd);
+	return r;
+}
+
+static int get_device_infos(const char *device, enum devcheck device_check,
+			    int *readonly, uint64_t *size)
+{
+	struct stat st;
 	unsigned long size_small;
-	int readonly = 0;
-	int ret = -1;
-	int fd;
+	int fd, r = -1;
+	int flags = 0;
+
+	*readonly = 0;
+	*size = 0;
+
+	if (stat(device, &st) < 0)
+		return -EINVAL;
+
+	/* never wipe header on mounted device */
+	if (device_check == DEV_EXCL && S_ISBLK(st.st_mode))
+		flags |= O_EXCL;
 
 	/* Try to open read-write to check whether it is a read-only device */
-	fd = open(device, O_RDWR);
-	if (fd < 0) {
-		if (errno == EROFS) {
-			readonly = 1;
-			fd = open(device, O_RDONLY);
-		}
-	} else {
-		close(fd);
-		fd = open(device, O_RDONLY);
-	}
-	if (fd < 0) {
-		log_err(cd, _("Cannot open device: %s\n"), device);
-		return -1;
+	fd = open(device, O_RDWR | flags);
+	if (fd == -1 && errno == EROFS) {
+		*readonly = 1;
+		fd = open(device, O_RDONLY | flags);
 	}
 
-#ifdef BLKROGET
+	if (fd == -1 && device_check == DEV_EXCL && errno == EBUSY)
+		return -EBUSY;
+
+	if (fd == -1)
+		return -EINVAL;
+
 	/* If the device can be opened read-write, i.e. readonly is still 0, then
 	 * check whether BKROGET says that it is read-only. E.g. read-only loop
 	 * devices may be openend read-write but are read-only according to BLKROGET
 	 */
-	if (readonly == 0 && ioctl(fd, BLKROGET, &readonly) < 0) {
-		log_err(cd, _("BLKROGET failed on device %s.\n"), device);
+	if (*readonly == 0 && (r = ioctl(fd, BLKROGET, readonly)) < 0)
+		goto out;
+
+	if (ioctl(fd, BLKGETSIZE64, size) >= 0) {
+		*size >>= SECTOR_SHIFT;
+		r = 0;
 		goto out;
 	}
-#else
-#error BLKROGET not available
-#endif
 
-#ifdef BLKGETSIZE64
-	if (ioctl(fd, BLKGETSIZE64, &size) >= 0) {
-		size >>= SECTOR_SHIFT;
-		ret = 0;
-		goto out;
-	}
-#endif
-
-#ifdef BLKGETSIZE
 	if (ioctl(fd, BLKGETSIZE, &size_small) >= 0) {
-		size = (uint64_t)size_small;
-		ret = 0;
+		*size = (uint64_t)size_small;
+		r = 0;
 		goto out;
 	}
-#else
-#	error Need at least the BLKGETSIZE ioctl!
-#endif
 
-	log_err(cd, _("BLKGETSIZE failed on device %s.\n"), device);
+	r = -EINVAL;
 out:
-	if (ret == 0) {
-		infos->size = size;
-		infos->readonly = readonly;
-	}
 	close(fd);
-	return ret;
+	return r;
 }
 
-int wipe_device_header(const char *device, int sectors)
+int device_check_and_adjust(struct crypt_device *cd,
+			    const char *device,
+			    enum devcheck device_check,
+			    uint64_t *size,
+			    uint64_t *offset,
+			    uint32_t *flags)
 {
-	char *buffer;
-	int size = sectors * SECTOR_SIZE;
-	int r = -1;
-	int devfd;
+	int r, real_readonly;
+	uint64_t real_size;
 
-	devfd = open(device, O_RDWR | O_DIRECT | O_SYNC);
-	if(devfd == -1)
-		return -EINVAL;
+	if (!device)
+		return -ENOTBLK;
 
-	buffer = malloc(size);
-	if (!buffer) {
-		close(devfd);
-		return -ENOMEM;
+	r = get_device_infos(device, device_check, &real_readonly, &real_size);
+	if (r < 0) {
+		if (r == -EBUSY)
+			log_err(cd, _("Cannot use device %s which is in use "
+				      "(already mapped or mounted).\n"),
+				      device);
+		else
+			log_err(cd, _("Cannot get info about device %s.\n"),
+				device);
+		return r;
 	}
-	memset(buffer, 0, size);
 
-	r = write_blockwise(devfd, buffer, size) < size ? -EIO : 0;
+	if (*offset >= real_size) {
+		log_err(cd, _("Requested offset is beyond real size of device %s.\n"),
+			device);
+		return -EINVAL;
+	}
 
-	free(buffer);
-	close(devfd);
+	if (!*size) {
+		*size = real_size;
+		if (!*size) {
+			log_err(cd, _("Device %s has zero size.\n"), device);
+			return -ENOTBLK;
+		}
+		*size -= *offset;
+	}
 
-	return r;
+	/* in case of size is set by parameter */
+	if ((real_size - *offset) < *size) {
+		log_dbg("Device %s: offset = %" PRIu64 " requested size = %" PRIu64
+			", backing device size = %" PRIu64,
+			device, *offset, *size, real_size);
+		log_err(cd, _("Device %s is too small.\n"), device);
+		return -EINVAL;
+	}
+
+	if (real_readonly)
+		*flags |= CRYPT_ACTIVATE_READONLY;
+
+	log_dbg("Calculated device size is %" PRIu64 " sectors (%s), offset %" PRIu64 ".",
+		*size, real_readonly ? "RO" : "RW", *offset);
+	return 0;
 }
 
 /* MEMLOCK */
@@ -648,7 +435,7 @@ int crypt_memlock_inc(struct crypt_device *ctx)
 {
 	if (!_memlock_count++) {
 		log_dbg("Locking memory.");
-		if (mlockall(MCL_CURRENT | MCL_FUTURE)) {
+		if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1) {
 			log_err(ctx, _("WARNING!!! Possibly insecure memory. Are you root?\n"));
 			_memlock_count--;
 			return 0;
@@ -658,7 +445,7 @@ int crypt_memlock_inc(struct crypt_device *ctx)
 			log_err(ctx, _("Cannot get process priority.\n"));
 		else
 			if (setpriority(PRIO_PROCESS, 0, DEFAULT_PROCESS_PRIORITY))
-				log_err(ctx, _("setpriority %u failed: %s"),
+				log_err(ctx, _("setpriority %d failed: %s\n"),
 					DEFAULT_PROCESS_PRIORITY, strerror(errno));
 	}
 	return _memlock_count ? 1 : 0;
@@ -668,10 +455,10 @@ int crypt_memlock_dec(struct crypt_device *ctx)
 {
 	if (_memlock_count && (!--_memlock_count)) {
 		log_dbg("Unlocking memory.");
-		if (munlockall())
-			log_err(ctx, _("Cannot unlock memory."));
+		if (munlockall() == -1)
+			log_err(ctx, _("Cannot unlock memory.\n"));
 		if (setpriority(PRIO_PROCESS, 0, _priority))
-			log_err(ctx, _("setpriority %u failed: %s"), _priority, strerror(errno));
+			log_err(ctx, _("setpriority %d failed: %s\n"), _priority, strerror(errno));
 	}
 	return _memlock_count ? 1 : 0;
 }
@@ -692,6 +479,7 @@ void get_topology_alignment(const char *device,
 {
 	int dev_alignment_offset = 0;
 	unsigned int min_io_size = 0, opt_io_size = 0;
+	unsigned long temp_alignment = 0;
 	int fd;
 
 	*required_alignment = default_alignment;
@@ -715,14 +503,16 @@ void get_topology_alignment(const char *device,
 	/* alignment offset, bogus -1 means misaligned/unknown */
 	if (ioctl(fd, BLKALIGNOFF, &dev_alignment_offset) == -1 || dev_alignment_offset < 0)
 		dev_alignment_offset = 0;
-
-	if (*required_alignment < (unsigned long)min_io_size)
-		*required_alignment = (unsigned long)min_io_size;
-
-	if (*required_alignment < (unsigned long)opt_io_size)
-		*required_alignment = (unsigned long)opt_io_size;
-
 	*alignment_offset = (unsigned long)dev_alignment_offset;
+
+	temp_alignment = (unsigned long)min_io_size;
+
+	if (temp_alignment < (unsigned long)opt_io_size)
+		temp_alignment = (unsigned long)opt_io_size;
+
+	/* If calculated alignment is multiple of default, keep default */
+	if (temp_alignment && (default_alignment % temp_alignment))
+		*required_alignment = temp_alignment;
 
 	log_dbg("Topology: IO (%u/%u), offset = %lu; Required alignment is %lu bytes.",
 		min_io_size, opt_io_size, *alignment_offset, *required_alignment);
