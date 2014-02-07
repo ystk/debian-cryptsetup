@@ -55,7 +55,7 @@ encrypted partition /dev/hda2 during boot.
 In addition, you must also make sure that the root device is listed in 
 /etc/fstab, for example:
 
-  /dev/mapper/cryptroot / ext3 defaults 0 1
+  /dev/mapper/cryptroot / ext4 defaults 0 1
 
 This will allow the initramfs support scripts to know which of the devices
 in the crypttab that is the root device.
@@ -170,6 +170,14 @@ cryptswap /dev/hda2 cryptroot cipher=aes-cbc-essiv:sha256,size=256,hash=sha256,k
 After you've followed the above steps, your swap device should be setup
 automatically after the root device has been setup during the boot stage.
 
+WARNING: If you use the decrypt_derived keyscript for devices with persistent
+data (i.e. not swap or temp devices), then you will lose access to that data
+permanently if something damages the LUKS header of the LUKS device you derive
+from. The same applies if you luksFormat the device, even if you use the same
+passphrase(s). A LUKS header backup, or better a backup of the data on the
+derived device may be a good idea. See the Cryptsetup FAQ on how to do this
+right.
+
 Note: If you don't use suspend device support, it's better to use completely
 random keys for your encrypted swap device. See the section '2. Encrypted
 swap partition(s)' in /usr/share/doc/cryptsetup/README.Debian for information
@@ -199,4 +207,20 @@ device, then initramfs-tools needs to be configured to add these modules to
 the initramfs. This can be done by listing the required modules in
 /etc/initramfs-tools/modules.
 
--- David Härdeman <david@hardeman.nu>
+11. Limitation: renaming of target name for encrypted root device
+-----------------------------------------------------------------
+As spotted by Adam Lee in bugreport #671037[1], it's not possible to simply
+rename the target name for encrypted root devices. It breaks the initramfs
+creation process. The bugreport submitter found a solution to workaround this
+limitation:
+
+0. enter another system(like livecd)
+1. luksOpen with the new name, change the target name to the new one
+2. chroot into it(now, the living target name is the same as it in conf)
+3. update-initramfs -u
+4. reboot
+
+[1] http://bugs.debian.org/671037
+
+ -- David Härdeman <david@hardeman.nu>
+ -- Jonas Meurer <mejo@debian.org>  Thu, 01 Nov 2012 13:44:31 +0100

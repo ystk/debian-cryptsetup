@@ -30,11 +30,12 @@ keys=$(sed 's/^\(.*,\|\)key=//; s/,.*//' ${DESTDIR}/conf/conf.d/cryptroot)
 
 if [ "${keys}" != "none" ]; then
     if [ -z "${keys}" ]; then
-        echo $0: Missing key files in ${DESTDIR}/conf/conf.d/cryptroot >&2
+        echo "$0: Missing key files in ${DESTDIR}/conf/conf.d/cryptroot" >&2
         cat ${DESTDIR}/conf/conf.d/cryptroot >&2
         exit 1
     fi
     for key in ${keys} ; do
+	echo "WARNING: GnuPG key $key is copied to initramfs" >&2
         if [ ! -d ${DESTDIR}/$(dirname ${key}) ] ; then
             mkdir -p ${DESTDIR}/$(dirname ${key})
         fi

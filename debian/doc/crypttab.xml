@@ -46,14 +46,15 @@
   </simpara>
   <simpara>
    The second field, <emphasis>source device</emphasis>, describes either the
-   block special device or file (which will be automatically mounted as a loop
-   device) that should hold the encrypted data.
+   block special device or file that contains the encrypted data. Instead of
+   giving the <emphasis>source device</emphasis> explicitly, the UUID is
+   supported as well, using <emphasis>UUID=&lt;luks_uuid&gt;</emphasis>.
   </simpara>
   <simpara>
    The third field, <emphasis>key file</emphasis>, describes the file to use
    as a key for decrypting the data of the <emphasis>source device</emphasis>.
    Note that the <emphasis>entire</emphasis> key file will be used as the
-   passphase; the passphase must <emphasis>not</emphasis> be
+   passphrase; the passphrase must <emphasis>not</emphasis> be
    followed by a newline character.
   </simpara>
   <simpara>
@@ -93,7 +94,7 @@
     <term><emphasis>cipher</emphasis>=&lt;cipher&gt;</term>
     <listitem>
      <simpara>
-      Encryption algorithm. See <command>cryptsetup -c</command>.
+      Encryption algorithm (ignored for LUKS devices). See <command>cryptsetup -c</command>.
      </simpara>
     </listitem>
    </varlistentry>
@@ -102,7 +103,7 @@
     <term><emphasis>size</emphasis>=&lt;size&gt;</term>
     <listitem>
      <simpara>
-      Encryption key size. See <command>cryptsetup -s</command>.
+      Encryption key size (ignored for LUKS devices). See <command>cryptsetup -s</command>.
      </simpara>
     </listitem>
    </varlistentry>
@@ -111,7 +112,7 @@
     <term><emphasis>hash</emphasis>=&lt;hash&gt;</term>
     <listitem>
      <simpara>
-      Hash algorithm. See <command>cryptsetup -h</command>.
+      Hash algorithm (ignored for LUKS devices). See <command>cryptsetup -h</command>.
      </simpara>
     </listitem>
    </varlistentry>
@@ -120,7 +121,7 @@
     <term><emphasis>offset</emphasis>=&lt;offset&gt;</term>
     <listitem>
      <simpara>
-      Start offset. Uses <emphasis role="strong">cryptsetup -o</emphasis>.
+      Start offset (ignored for LUKS devices). Uses <emphasis role="strong">cryptsetup -o</emphasis>.
      </simpara>
     </listitem>
    </varlistentry>
@@ -129,7 +130,7 @@
     <term><emphasis>skip</emphasis>=&lt;skip&gt;</term>
     <listitem>
      <simpara>
-      Skip sectors at the beginning. Uses <emphasis role="strong">cryptsetup -p</emphasis>.
+      Skip sectors at the beginning (ignored for LUKS devices). Uses <emphasis role="strong">cryptsetup -p</emphasis>.
      </simpara>
     </listitem>
    </varlistentry>
@@ -151,9 +152,24 @@
    </varlistentry>
 
    <varlistentry>
+    <term><emphasis>discard</emphasis></term>
+    <listitem>
+     <simpara>Allow using of discards (TRIM) requests for device.</simpara>
+     <simpara><emphasis role="strong">WARNING</emphasis>: Assess the
+     specific security risks carefully before enabling this option.
+     For example, allowing discards on encrypted devices may lead to
+     the leak of information about the ciphertext device (filesystem
+     type, used space etc.) if the discarded blocks can be located
+     easily on the device later.</simpara>
+      <simpara>Kernel version 3.1 or more recent is required.
+      For older versions is the option ignored.</simpara>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><emphasis>luks</emphasis></term>
     <listitem>
-     <simpara>Use device with luks extensions.</simpara>
+     <simpara>Use device with LUKS extensions.</simpara>
     </listitem>
    </varlistentry>
 
@@ -171,7 +187,7 @@
     <listitem>
      <simpara>
       Run <command moreinfo="refentry">mkfs</command> with filesystem type
-      &lt;tmpfs&gt; on the created device. Default is ext2.
+      &lt;tmpfs&gt; on the created device. Default is ext4.
      </simpara>
     </listitem>
    </varlistentry>
@@ -187,7 +203,7 @@
       full path to program is supported as well.
      </simpara>
      <simpara>
-      Prechecks aren't invoked for LUKS devices, as these are checked with isLUKS
+      Prechecks aren't invoked for LUKS devices, as these are checked with isLuks
       anyway. Default for plain dm-crypt devices is set in
       <filename>/etc/default/cryptdisks</filename>, or <filename>un_blkid</filename>
       otherwise. Set to <filename>/bin/true</filename> in order to disable
@@ -228,8 +244,8 @@
     <listitem>
      <simpara>The input of the passphrase is tried &lt;num&gt; times in case
       of failure. If you want to disable retries, pass <quote>tries=1</quote>.
-      Default is 3. For the root device, <quote>tries=0</quote> enables
-      infinitive retries due to a special case in the initramfs scripts.
+      Default is 3. Setting <quote>tries=0</quote> will ask for the passphrase
+      until a correct one has been submitted (infinitive retries).
      </simpara>
     </listitem>
    </varlistentry>
@@ -281,6 +297,12 @@
       encrypted root filesystems via initramfs if the executable is
       self-contained (i.e. an executable which does not rely on any external
       program which is not present in the initramfs environment).
+     </simpara>
+     <simpara>
+      LIMITATIONS: All binaries and files on which the keyscript depends must
+      be available at the time of execution. Special care needs to be taken for
+      encrypted filesystems like /usr or /var. As an example, unlocking
+      encrypted /usr must not depend on binaries from /usr/(s)bin.
      </simpara>
      <para>
       All fields of the appropriate crypttab entry are available to the keyscript
@@ -345,8 +367,8 @@
        "none" - succeeds if no valid filesystem is found on the device.
       </para></listitem>
       <listitem><para>
-       "ext3" [or another filesystem type like xfs, swap, crypto_LUKS, ...] -
-       succeeds if ext3 filesystem is found on the device.
+       "ext4" [or another filesystem type like xfs, swap, crypto_LUKS, ...] -
+       succeeds if ext4 filesystem is found on the device.
       </para></listitem>
      </itemizedlist>
     </listitem>
@@ -363,8 +385,8 @@
        no checkargs - succeeds if no valid filesystem is found on the device.
       </para></listitem>
       <listitem><para>
-       "ext3" [or another filesystem type like xfs, swap, crypto_LUKS, ...] -
-       succeeds if no ext3 filesystem is found on the device.
+       "ext4" [or another filesystem type like xfs, swap, crypto_LUKS, ...] -
+       succeeds if no ext4 filesystem is found on the device.
       </para></listitem>
      </itemizedlist>
     </listitem>
@@ -378,23 +400,23 @@
   <para>
    <screen>
 # Encrypted swap device
-cswap /dev/sda6 /dev/urandom swap
+cswap /dev/sda6 /dev/urandom cipher=aes-cbc-essiv:sha256,hash=ripemd160,size=256,swap
     
-# Encrypted luks disk with interactive password
-cdisk0 /dev/hda1 none luks
+# Encrypted LUKS disk with interactive password, identified by UUID
+cdisk0 UUID=12345678-9abc-def012345-6789abcdef01 none luks
     
-# Encrypted ext2 disk with interactive password
+# Encrypted ext4 disk with interactive password
 # - retry 5 times if the check fails
-cdisk1 /dev/sda2 none checkargs=ext2,tries=5
+cdisk1 /dev/sda2 none cipher=aes-cbc-essiv:sha256,hash=ripemd160,size=256,checkargs=ext4,tries=5
 
 # Encrypted disk with interactive password
 # - use a nondefault check script
 # - no retries
-cdisk2 /dev/hdc1 none check=customscript,tries=1
+cdisk2 /dev/hdc1 none cipher=aes-cbc-essiv:sha256,hash=ripemd160,size=256,check=customscript,tries=1
 
 # Encrypted disk with interactive password
 # - twofish as the cipher
-cdisk3 /dev/sda3 none cipher=twofish
+cdisk3 /dev/sda3 none cipher=twofish,hash=ripemd160,size=256
    </screen>
   </para>
  </refsect1>
@@ -453,6 +475,24 @@ cdisk3 /dev/sda3 none cipher=twofish
    </varlistentry>
 
   </variablelist>
+ </refsect1>
+
+ <refsect1 id="crypttab.known_upgrade_issues">
+  <title>KNOWN UPGRADE ISSUES</title>
+  <simpara>
+   The upstream defaults for encryption cipher, hash and keysize have changed
+   several times in the past, and they're expected to change again in future,
+   for example if security issues arise.
+
+   On LUKS devices, the used settings are stored in the LUKS header, and thus
+   don't need to be configured in <filename>/etc/crypttab</filename>. For plain
+   dm-crypt devices, no information about used cipher, hash and keysize are
+   available at all.
+
+   Therefore we strongly suggest to configure the cipher, hash and keysize in
+   <filename>/etc/crypttab</filename> for plain dm-crypt devices, even if they
+   match the current default.
+  </simpara>
  </refsect1>
 
  <refsect1 id="crypttab.see_also">

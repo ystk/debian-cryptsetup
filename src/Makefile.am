@@ -10,23 +10,28 @@ INCLUDES = \
 	-D_GNU_SOURCE
 
 cryptsetup_SOURCES = \
+	$(top_builddir)/lib/utils_crypt.c	\
+	$(top_builddir)/lib/utils_loop.c	\
+	$(top_builddir)/lib/utils_fips.c	\
 	cryptsetup.c				\
 	cryptsetup.h
 
-if STATIC_CRYPTSETUP
-_STATIC_FLAGS = -all-static
-_STATIC_LDADD = @LIBGCRYPT_LIBS@ -lgpg-error @SELINUX_STATIC_LIBS@
-endif
-
 cryptsetup_LDADD = \
 	$(top_builddir)/lib/libcryptsetup.la	\
-	$(_STATIC_LDADD)			\
-	@POPT_LIBS@
-
-
-cryptsetup_LDFLAGS = \
-	$(_STATIC_FLAGS)
+	@POPT_LIBS@				\
+	@FIPSCHECK_LIBS@
 
 cryptsetup_CFLAGS = -Wall
 
 sbin_PROGRAMS=cryptsetup
+
+if STATIC_CRYPTSETUP
+sbin_PROGRAMS += cryptsetup.static
+cryptsetup_static_SOURCES = $(cryptsetup_SOURCES)
+cryptsetup_static_CFLAGS = $(cryptsetup_CFLAGS)
+cryptsetup_static_LDFLAGS = -all-static
+cryptsetup_static_LDADD = $(cryptsetup_LDADD)	\
+	@CRYPTO_STATIC_LIBS@			\
+	@DEVMAPPER_STATIC_LIBS@			\
+	@UUID_LIBS@
+endif

@@ -10,9 +10,33 @@
 
 use Getopt::Long qw(:config pass_through);
 
+BEGIN {
+    eval 'use Locale::gettext';
+    if ($@) {
+        *gettext = sub { shift };
+        *textdomain = sub { "" };
+        *LC_MESSAGES = sub { 5 };
+    }
+    eval {
+        require POSIX;
+        import POSIX qw(setlocale);
+    };
+    if ($@) {
+        *setlocale = sub { return 1 };
+    }
+}
+
+setlocale(LC_MESSAGES, "");
+textdomain("luksformat");
+
+if ($> != 0) {
+    print STDERR gettext("This program needs to be started as root\n");
+    exit 1;
+}
+
 sub usage() {
-    print "luksformat - Create and format an encrypted LUKS device
-Usage: luksformat [-t <file system>] <device> [ mkfs options ]\n";
+    print gettext("luksformat - Create and format an encrypted LUKS device
+Usage: luksformat [-t <file system>] <device> [ mkfs options ]\n\n");
     exit 1;
 }
 
@@ -25,16 +49,11 @@ if (($#ARGV < 0) || ($help)) {
     usage();
 }
 
-if ($> != 0) {
-    print STDERR "This program needs to be started as root\n";
-    exit 1;
-}
-
 $device = shift(@ARGV);
 
 open(MOUNTS, "/proc/mounts");
 while (<MOUNTS>) {
-    die "Error: device mounted: $device\n" if (/\Q$device\E/)
+    die sprintf(gettext("Error: device mounted: %s\n"), $device) if (/\Q$device\E/)
 }
 
 if (-x "/sbin/mkfs.$fs") {
@@ -44,7 +63,7 @@ elsif (-x "/usr/sbin/mkfs.$fs") {
     $mkfs = "/usr/sbin/mkfs.$fs";
 }
 else {
-    print STDERR "Error: invalid file system: $fs\n";
+    printf STDERR (gettext("Error: invalid file system: %s\n"), $fs);
     exit 1;
 }
 
@@ -57,18 +76,18 @@ for ($i = 1; $i < 100; $i++) {
     }
 }
 
-$name or die "Error: could not generate temporary mapped device name";
+$name or die sprintf(gettext("Error: could not generate temporary mapped device name"));
 
 # we do not need to be overly concerned with race conditions here, cryptsetup
 # will just fail if the name already exists now.
-print "Creating encrypted device on $device...\n";
+printf (gettext("Creating encrypted device on %s...\n"), $device);
 if ((system 'cryptsetup', 'luksFormat', '-s', '256', '--cipher', 'aes-cbc-essiv:sha256', $device)) {
-    die "Could not create LUKS device $device";
+    die sprintf(gettext("Could not create LUKS device %s"), $device);
 }
 
-print "Please enter your passphrase again to verify it\n";
+print gettext("Please enter your passphrase again to verify it\n");
 if ((system 'cryptsetup', 'luksOpen', $device, $name) != 0) {
-    print STDERR "The passphrases you entered were not identical\n";
+    print STDERR gettext("The passphrases you entered were not identical\n");
     exit 1;
 }
 
@@ -77,7 +96,7 @@ print "\n";
 system 'udevadm', 'settle', '--timeout=30';
 system 'cryptsetup', 'luksClose', $name;
 
-die "Could not format device with file system $fs" if $result;
+die sprintf(gettext("Could not format device with file system %s"), $fs) if $result;
 
 __END__
 

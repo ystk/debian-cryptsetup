@@ -30,7 +30,7 @@ fi
 log_action_begin_msg "Stopping crypto disk"
 
 count=0
-tablen="$(egrep -v "^[[:space:]]*(#|$)" "$TABFILE" | /usr/bin/wc -l)"
+tablen="$(egrep -vc "^[[:space:]]*(#|$)" "$TABFILE")"
 egrep -v "^[[:space:]]*(#|$)" "$TABFILE" | while read dst src key opts; do
 	count=$(( $count + 1 ))
 	if [ "$1" = "$dst" ]; then

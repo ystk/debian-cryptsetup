@@ -34,7 +34,7 @@ fi
 
 # This list needs to be kept in sync with the one defined in passdev.c
 for fs in ext4 ext3 ext2 vfat btrfs reiserfs xfs jfs ntfs iso9660 udf; do
-	manual_add_modules "$fs" > /dev/null 2>&1 || true
+	manual_add_modules "$fs" >/dev/null 2>&1 || true
 done
 exit 0
 

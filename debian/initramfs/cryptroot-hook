@@ -77,6 +77,9 @@ get_resume_devices() {
 	devices=""
 	count=0
 	for device in $candidates; do
+		# Remove quotes around device candidate
+		device=$(echo $device | sed -e 's/^"\(.*\)"[[:space:]]*$/\1/' -e "s/^'\(.*\)'[[:space:]]*$/\1/")
+
 		# Weed out clever defaults
 		if [ "$device" = "<path_to_resume_device_file>" ]; then
 			continue
@@ -86,7 +89,10 @@ get_resume_devices() {
 		derived="$(grep "^${device#/dev/mapper/}\b.*decrypt_derived" /etc/crypttab 2>/dev/null | awk '{print $3}')"
 		if [ -n "$derived" ]; then
 			if grep -q "^$derived" /etc/crypttab; then
-				candidates="$candidates /dev/mapper/$derived"
+				derived=$(canonical_device "/dev/mapper/$derived") || return 0
+				if [ "$derived" != "$rootdev" ]; then
+					devices="$devices $derived"
+				fi
 			else
 				echo "cryptsetup: WARNING: decrypt_derived device $derived not found in crypttab" >&2
 			fi
@@ -141,20 +147,18 @@ get_lvm_deps() {
 		return 1
 	fi
 
-	if ! deps=$(dmsetup deps "$node" 2> /dev/null | sed 's/[^:]*: *//;s/[ (]//g;s/)/ /g'); then
-		echo "cryptsetup: WARNING: failed to find deps for $node" >&2
-		return 1
+	if ! deps=$(vgs --noheadings -o pv_name $(dmsetup --noheadings splitname $node | cut -d':' -f1) 2>/dev/null); then
+		# $node is not a LVM node, stopping here
+		return 0
 	fi
 
-	# We should now have a list of major,minor pairs, e.g. "3,2 3,3"
+	# We should now have a list physical volumes for the VG
 	for dep in $deps; do
-		maj=$(echo ${dep%,*} | sed -e "s/^[ \t]*//g")
-		min=$(echo ${dep#*,} | sed -e "s/[ \t]*$//g")
-		depnode=$(dmsetup ls | sed -n "s/\\([^ ]*\\) *($maj, $min)/\\1/p" | sed -e "s/[ \t]*$//")
+		depnode=$(dmsetup info -c --noheadings -o name "$dep" 2>/dev/null)
 		if [ -z "$depnode" ]; then
 			continue
 		fi
-		if [ "$(dmsetup table "$depnode" 2> /dev/null | cut -d' ' -f3)" != "crypt" ]; then
+		if [ "$(dmsetup table "$depnode" 2>/dev/null | cut -d' ' -f3)" != "crypt" ]; then
 			get_lvm_deps "$depnode"
 			continue
 		fi
@@ -182,7 +186,7 @@ get_device_opts() {
 	rootopts=$( echo $opt | cut -d " " -f4- )
 
 	if [ -z "$opt" ] || [ -z "$source" ] || [ -z "$key" ] || [ -z "$rootopts" ]; then
-		echo "cryptsetup: WARNING: invalid line in /etc/crypttab - $opt" >&2
+		echo "cryptsetup: WARNING: invalid line in /etc/crypttab for $target - $opt" >&2
 		return 1
 	fi
 
@@ -243,6 +247,9 @@ get_device_opts() {
 				OPTIONS="$OPTIONS,$opt"
 				;;
 			rootdev)
+				OPTIONS="$OPTIONS,$opt"
+				;;
+			discard)
 				OPTIONS="$OPTIONS,$opt"
 				;;
 			luks)
@@ -392,7 +399,7 @@ add_device() {
 		if ! get_device_opts "$node" "$opts"; then
 			continue
 		fi
-		echo "$OPTIONS" >> "$DESTDIR/conf/conf.d/cryptroot"
+		echo "$OPTIONS" >>"$DESTDIR/conf/conf.d/cryptroot"
 
 		# If we have a keyscript, make sure it is included
 		if [ -n "$KEYSCRIPT" ]; then
@@ -404,6 +411,10 @@ add_device() {
 				copy_exec "/lib/cryptsetup/scripts/$KEYSCRIPT" /lib/cryptsetup/scripts >&2
 			elif [ -e "$KEYSCRIPT" ]; then
 				copy_exec "$KEYSCRIPT" /lib/cryptsetup/scripts >&2
+			elif KSTYPE="$(type "$KEYSCRIPT" 2>&1)"; then
+				if [ -x "${KSTYPE#"$KEYSCRIPT" is }" ]; then
+					copy_exec "${KSTYPE#"$KEYSCRIPT" is }" /lib/cryptsetup/scripts >&2
+				fi
 			else
 				echo "cryptsetup: WARNING: failed to find keyscript $KEYSCRIPT" >&2
 				continue
@@ -419,11 +430,18 @@ add_device() {
 		echo dm_mod
 		echo dm_crypt
 		echo "$modules"
-
+		# Load hardware aes module
+		if cpu_has_aesni; then
+			echo aesni
+		fi
 		i=$(( $i + 1 ))
 	done
 
 	return 0
+}
+
+cpu_has_aesni() {
+	return $(grep -q aes /proc/cpuinfo)
 }
 
 add_crypto_modules() {
@@ -446,14 +464,14 @@ add_crypto_modules() {
 	#
 	#   d) /lib/modules/$VERSION/kernel/drivers/crypto/$specific-$mod.ko
 
-	for file in $(find "$MODULESDIR/kernel/arch/" -name "$mod-*.ko"); do
+	for file in $(find "$MODULESDIR/kernel/arch/" -name "$mod-*.ko" 2>/dev/null); do
 		altmod="${file##*/}"
 		altmod="${altmod%.ko}"
 		manual_add_modules "$altmod"
 		found="yes"
 	done
 
-	for file in $(find "$MODULESDIR/kernel/crypto/" -name "${mod}_generic.ko"); do
+	for file in $(find "$MODULESDIR/kernel/crypto/" -name "${mod}_generic.ko" 2>/dev/null); do
 		altmod="${file##*/}"
 		altmod="${altmod%.ko}"
 		manual_add_modules "$altmod"
@@ -462,7 +480,7 @@ add_crypto_modules() {
 	done
 
 	if [ -z "$genericfound" ]; then
-		for file in $(find "$MODULESDIR/kernel/crypto/" -name "${mod}.ko"); do
+		for file in $(find "$MODULESDIR/kernel/crypto/" -name "${mod}.ko" 2>/dev/null); do
 			altmod="${file##*/}"
 			altmod="${altmod%.ko}"
 			manual_add_modules "$altmod"
@@ -503,7 +521,7 @@ for dev in $rootdev $resumedevs; do
 	setup="yes"
 
 	if [ "$MODULES" = "most" ]; then
-		archcrypto="$(find "$MODULESDIR/kernel/arch" -type d -name "crypto")"
+		archcrypto="$(find "$MODULESDIR/kernel/arch" -type d -name "crypto" 2>/dev/null)"
 		if [ -n "$archcrypto" ]; then
 			copy_modules_dir "${archcrypto##*${MODULESDIR}/}"
 		fi
@@ -531,6 +549,11 @@ if [ "$MODULES" != "dep" ] || [ "$setup" = "yes" ]; then
 	copy_exec /sbin/cryptsetup
 	copy_exec /sbin/dmsetup
 	copy_exec /lib/cryptsetup/askpass
+
+	# We need sed. Either via busybox or as standalone binary.
+	if [ "$BUSYBOX" = "n" ] || [ ! -e ${BUSYBOXDIR}/busybox ]; then
+		copy_exec /bin/sed
+	fi
 fi
 
 exit 0

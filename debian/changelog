@@ -1,18 +1,318 @@
-cryptsetup (2:1.1.3-4squeeze2) stable-proposed-updates; urgency=low
+cryptsetup (2:1.4.3-4) unstable; urgency=medium
 
-  * fix changelog for cryptsetup 2:1.1.3-4squeeze1.
+  * change recommends for busybox to busybox | busybox-static. Thanks to
+    Armin Haas for the bugreport. (closes: #692151)
 
- -- Jonas Meurer <mejo@debian.org>  Thu, 10 Mar 2011 21:45:56 +0100
+ -- Jonas Meurer <mejo@debian.org>  Wed, 07 Nov 2012 16:12:25 +0100
 
-cryptsetup (2:1.1.3-4squeeze1) stable-proposed-updates; urgency=low
+cryptsetup (2:1.4.3-3) unstable; urgency=medium
 
+  * add recommends for 'kbd, console-setup' to cryptsetup package. Both are
+    necessary to support local keymap in initramfs. Thanks to Raphaël Hertzog
+    for the bugreport. (closes: #689722)
+  * move suggestion for 'initramfs-tools (>= 0.91) | linux-initramfs-tool,
+    busybox' to recommends. Both are required for encrypted root fs.
+  * remove suggestion for udev, most debian systems have it installed anyway.
+  * mention option to use UUID=<luks_uuid> for source device in crypttab(5).
+    Thanks to Felicitus for the bug report. (closes: #688786)
+  * add a paragraph in README.initramfs: Describe, why renaming the target
+    name is not supported for encrypted root devices. Thanks to Adam Lee for
+    bugreport and proposed workaround for this limitation. (closes: #671037)
+  * fix keyfile permission checks in cryptdisks init scripts to follow
+    symlinks. Thanks to intrigeri for the bugreport. (closes: #691517)
+  * fix owner group check for keyfile in cryptdisks init scripts to really
+    check owner group.
+  * update debconf translations:
+    - brasilian portuguese, thanks to Adriano Rafael Gomes. (closes: #685762)
+    - japanese, thanks to victory. (closes: #690784)
+  * fix typo in manpages: s/passphase/passphrase. Thanks to Milan Broz for
+    the bugreport. (closes: #684086)
+
+ -- Jonas Meurer <mejo@debian.org>  Thu, 01 Nov 2012 15:34:09 +0100
+
+cryptsetup (2:1.4.3-2) unstable; urgency=medium
+
+  * fix the shared library symbols magic: so far, the symbols file for
+    libcryptsetup4 included just a wildcard for all exported symbols, with
+    libcrypsetup4 (>= 2:1.4) as minimum version. This was wrong. Symbols
+    that were added later need adjusted minimum versions. Thanks for the
+    great help in #debian-mentors. (closes: #677127)
+  * remove emtpy directory /lib from cryptsetup-bin package.
+  * compile askpass and passdev with CFLAGS, CPPFLAGS and LDFLAGS.
+
+ -- Jonas Meurer <mejo@debian.org>  Tue, 12 Jun 2012 21:26:18 +0200
+
+cryptsetup (2:1.4.3-1) unstable; urgency=low
+
+  [ Jonas Meurer ]
+  * mention limitations for keyscripts in crypttab(5) manpage: keyscripts
+    must not depend on binaries/files which are part of the to-be-unlocked
+    device. (closes: #665494)
+  * bump versioned build-dependency on debhelper now that we install
+    upstart initscripts in debian as well.
+  * change versioned breaks/replaces for cryptsetup-bin on cryptsetup to
+    1.4.3-1~, fixing upgrades in debian.
+
+  [ Jean-Louis Dupond ]
+  * New upstream version. (closes: #670071)
+    - Fix keyslot removal (closes: #672299)
+    - Add -r to cryptsetup.8 (closes: #674027)
+  * Split up package in cryptsetup and cryptsetup-bin.
+  * I'm now co-maintainer (closes: #600777).
+  * Start cryptdisks-enable upstart job on 'or container', to let us
+    simplify the udevtrigger job.
+  * debian/cryptdisks.functions: handle the case where crypttab contains a
+    name for the source device that is not the kernel's preferred name for
+    it (as is the case for LVs). (Thanks Steve Langasek)
+  * debian/cryptdisks.functions: fix a race condition in some cases by
+    adding and udevadm settle before rename.
+  * debian/cryptdisks.functions: add UUID & LABEL support to do_start.
+  * debian/copyright: really fix lintian warning.
+  * debian/rules: also include upstart files in debian.
+
+ -- Jonas Meurer <mejo@debian.org>  Fri, 08 Jun 2012 13:42:51 +0200
+
+cryptsetup (2:1.4.1-3) unstable; urgency=low
+
+  [ Jonas Meurer ]
+  * finally add back support for configuration of custom rootfs-devices through
+    the boot parameter 'root' to initramfs cryptroot script. Thanks a lot to
+    August Martin for the bugreport as well as continuously debugging and
+    providing patches. (closes: #546610)
+  * use blkid instead of fstype to detect the content of devices in initramfs
+    cryptroot script. Unfortunately fstype doesn't recognize md-raid devices,
+    which leads to errors with encrypted devices on top of software raid.
+  * check whether $NEWROOT already exists before actually invoking cryptsetup
+    in initramfs cryptroot script. (closes: #653241)
+  * fix conditions for prechecks at do_noluks() in cryptdisks.functions. Should
+    prevent data loss with encrypted swap in most cases. (closes: #652497)
+  * change default value for tmpfs and examples from ext2 to ext4.
+  * minor code cleanup.
+  * update debconf translations:
+    - russian, thanks to Yuri Kozlov. (closes: #661303)
+    - spanish, thanks to Camaleón. (closes: #661316)
+
+  [ Jean-Louis Dupond ]
+  * fix watch file.
+  * always add aesni module to initramfs if we have hardware aes support.
+    (closes: #639832).
+  * debian/copyright: fix lintain warning.
+  * add upstart scripts for ubuntu.
+  * silent warnings on kernels without kernel/{arch,crypto}.
+  * add crypttab_start_one_disk in function script to handle udev startup
+    in ubuntu.
+  * bump standards-version to 3.9.3, no changes needed.
+
+ -- Jonas Meurer <mejo@debian.org>  Wed, 11 Apr 2012 23:55:35 +0200
+
+cryptsetup (2:1.4.1-2) unstable; urgency=low
+
+  * acknowledge NMU. Thanks to Michael Biebl. (closes: #659182)
+  * don't print error for non-encrypted rootfs in initramfs cryptroot hook.
+    Thanks to Jamie Heilman and Christoph Anton Mitterer for bugreports.
+    (closes: #659087, #659106)
+  * use dmsetup splitname to extract VG name from $node in initramfs cryptroot
+    hook. Thanks to Kai Weber for the bugreport, Milan Broz and Claudio
+    Imbrenda for suggestions and patches. (closes: #659235)
+
+ -- Jonas Meurer <mejo@debian.org>  Sun, 12 Feb 2012 15:51:11 +0100
+
+cryptsetup (2:1.4.1-1.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Fix dangling .so symlink. Don't hard code the library version but use
+    readlink instead to determine where the .so symlink should point at.
+    (closes: #659182)
+
+ -- Michael Biebl <biebl@debian.org>  Sat, 11 Feb 2012 04:32:01 +0100
+
+cryptsetup (2:1.4.1-1) unstable; urgency=low
+
+  * new upstream release (1.4.0 + 1.4.1) (closes: #647851)
+    - fixes typo in german translation. (closes: #645528)
+    - remove patches, all incorporated upstream.
+    - soname bump, rename library package to libcryptsetup4
+  * check for busybox in initramfs cryptroot hook, and install the sed binary
+    in case it's either not installed or not activated. (closes: #591853)
+  * add checks for 'type $KEYSCRIPT' to initscripts cryptdisks.functions, and
+    to cryptroot initramfs script/hook. this adds support for keyscripts inside
+    $PATH. thanks to Ian Jackson for the suggestion. (closes: #597583)
+  * use argument '--sysinit' for vgchange in cryptroot initramfs script. Thanks
+    to Christoph Anton Mitterer for the suggestion.
+  * add option for discard/trim features to crypttab and initramfs scripts.
+    Thanks to intrigeri and Peter Colberg for patches. (closes: #648868)
+  * print $target on error in initramfs hook. Thanks to Daniel Hahler for the
+    bugreport. (closes: #648192)
+  * add a warning about using decrypt_derived keyscript for devices with
+    persistent data. Thanks to Arno Wagner for pointing this out.
+  * remove quotes from resume device candidates at get_resume_devs() in
+    initramfs hook script. Thanks to Johannes Rohr. (closes: #634017)
+  * support custom $TABFILE, thanks to Douglas Huff. (closes: #638317)
+  * fix get_lvm_deps() in initramfs cryptroot hook to add all physical volumes
+    of lvm volume group that contains the rootfs logical volume, even if the
+    rootfs is lv is not spread over all physical volumes. Thanks to Christian
+    Pernegger for bugreport and patch. (closes: #634109)
+  * debian/initramfs/cryptroot-script: Move check for maximum number of tries
+    behind the while loop, to make the warning appear in case that maximum
+    number of tries is reached. Thanks to Chistian Lamparter for bugreport and
+    patch. (closes: #646083)
+  * incorporate changes to package descriptions and debconf templates that
+    suggested by debian-l10n-english people. Special thanks go to Justin B Rye.
+  * acknowledge NMU, thanks a lot to Christian Perrier for his great work on
+    the i18n front. (closes: #633105, #641719, #641839, #641947, #642470,
+    #640056, #642540, #643633, #643962, #644853)
+  * add and update debconf translations:
+    - italian, thanks to Milo Casagrande, Francesca Ciceri. (closes: #656933)
+    - german, thanks to Erik Pfannenstein. (closes: #642147)
+    - spanish, thanks to Camaleón. (closes: #658360)
+    - russian, thanks to Yuri Kuzlov (closes: #654676)
+  * set architecture to linux-any, depends on linux kernel anyway. Thanks to
+    Christoph Egger. (closes: #638257)
+  * small updates to the copyright file.
+  * add targets build-indep and build-arch to debian/rules, thanks to lintian.
+
+ -- Jonas Meurer <mejo@debian.org>  Sun, 05 Feb 2012 03:17:59 +0100
+
+cryptsetup (2:1.3.0-3.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Fix pending l10n issues. Debconf translations:
+    - French (Julien Patriarca).  Closes: #633105
+    - Vietnamese (Hung Tran).  Closes: #641719
+    - Portuguese (Miguel Figueiredo).  Closes: #641839
+    - Russian (Yuri Kozlov).  Closes: #641947
+    - Swedish (Martin Bagge / brother).  Closes: #642470,#640056
+    - Czech (Michal Simunek).  Closes: #642540
+    - Dutch; (Jeroen Schot).  Closes: #643633
+    - Spanish; (Camaleón).  Closes: #643962
+    - Danish (Joe Hansen).  Closes: #644853
+
+ -- Christian Perrier <bubulle@debian.org>  Sun, 25 Dec 2011 19:00:24 +0100
+
+cryptsetup (2:1.3.0-3) unstable; urgency=low
+
+  * drop the loopback magick from cryptdisks scripts. Mario 'Bitkoenig' Holbe
+    pointed out, that auto-destruction support was added to the loopback driver
+    with kernel 2.6.25. Given, that even lenny has a more recent kernel,
+    support for kernels < 2.6.25 is not required any more. (closes: #626458)
+  * add debconf question 'prerm/active-mappings' with priority high to prerm
+    maintainer script. will warn about active dm-crypt mappings before the
+    package is removed/purged. (closes: #626641)
+  * add lintian-override for 'cryptsetup: no-debconf-config', as the debconf
+    question in prerm doesn't require a debconf config script.
+  * add debian/patches/03_create_fix_keyfile.patch. (closes: #626738)
+
+ -- Jonas Meurer <mejo@debian.org>  Thu, 19 May 2011 20:50:08 +0200
+
+cryptsetup (2:1.3.0-2) unstable; urgency=low
+
+  * fix changelog of 2:1.3.0-1 release, thanks to Thorsten Glaser for the hint
+
+ -- Jonas Meurer <mejo@debian.org>  Thu, 12 May 2011 03:06:46 +0200
+
+cryptsetup (2:1.3.0-1) unstable; urgency=low
+
+  * new upstream release
+    - automatically allocates loopback device for container files. update the
+      cryptdisks functions to only setup loopback device for kernel < 2.6.35.
+      otherwise, let cryptsetup do the magic itself.
+    - introduces maximum default keyfile size, see --help for value. manually
+      set the keyfile size with --keyfile-size in order to overwrite the limit.
+    - adds luksChangeKey command for changing passphrase/keyfile in one step
+    - adds loopAES compatibility command loopaesOpen
+    - remove d/patches/01_luksAddKey_return_code.patch, incorporated upstream
+  * add gettext support to luksformat script. Thanks to intrigeri for initial
+    patch, and adduser sources for implementation ideas. (closes: #558405)
+  * fix KEYSCRIPT checks in cryptdisks.functions for empty values.
+  * update REAMDE.gnupg and initramfs cryptgnupg hook script:
+    - warn about keys being copied to initramfs.
+    - fix the documentation to provide working examples.
+  * update README.Debian and related documentation:
+    - add a section about the 'special' keyscripts askpass and passdev
+      (closes: #601314)
+    - update several sections, remove reference to lenny
+  * add debian/patches/01_create_fix_size.patch, to fix a regression in 1.2.0
+    where the size argument was ignored for create command (closes: #624828)
+  * add debian/patches/02_manpage.patch, escapes minus signs in manpage
+  * remove usplash support from cryptroot initramfs script, askpass and
+    keyscripts, add plymouth support to keyscripts. (closes: #620923)
+  * ignore options like cipher, hash, size, etc. for luks commands in
+    cryptdisks. mention this in the crypttab manpage. (closes: #619249)
+  * again check for existance of /lib/cryptsetup/cryptdisks.functions before
+    sourcing it in cryptdisks(-early).init. required if cryptsetup is removed
+    but not purged, where initscripts are still around. (closes: #625468)
+  * bump standards-version to 3.9.2, no changes needed.
+  * debian/libcryptsetup1.symbols: update, 1.3.0 adds new function symbols
+
+ -- Jonas Meurer <mejo@debian.org>  Wed, 11 May 2011 14:45:42 +0200
+
+cryptsetup (2:1.2.0-2) unstable; urgency=low
+
+  * upload to unstable.
+  * fixes a ftbfs due to updated libgpg-error and libgcrypt11 build-
+    dependencies. (closes: #614530)
   * install cryptkeyctl initramfs hook, needed for keyctl keyscript in
     initramfs, thanks to Maik Zumstrull (closes: #610750)
+  * use 'egrep -c' instead of wc in cryptdisks_st* scripts, wc might not be
+    available as it's located at /usr/bin. Thanks to Mario 'BitKoenig' Holbe
+    for bugreport and patch. (closes: #611747)
+  * add debian/patches/01_luksAddKey_return_code.patch, fixes the luksAddKey
+    return code when the master key is used. (closes: #610366)
   * fix luksformat script to invoke usage() with --help. (closes: #612947)
+  * add a paragraph about known upgrade issues to the crypttab manpage. this
+    paragraph strongly suggests to configure cipher, hash and keysize for
+    plain dm-crypt devices. (closes: #612452)
+  * fix examples in crypttab manpage, cipher, hash and keysize should be
+    configured for plain dm-crypt devices.
   * luksformat: invoke udevadm settle between mkfs.vfat and luksClose, to
     prevent possible race conditions. This is a workaround. (closes: #601886)
+  * update lintian-overrides for new lintian from experimental.
+  * fix spelling mistake in README.Debian thanks to lintian.
+  * update short and long description for udebs to mention udeb and
+    debian-installer. This satisfies lintian.
+  * fix get_resume_device() in initramfs cryptroot hook script to add source
+    device for decrypt_derived keyscript in case it's not the root device.
+    Thanks to Robert Lange and mahashakti89 for bugreport. (closes: #592430)
 
- -- Jonas Meurer <mejo@debian.org>  Wed, 09 Mar 2011 21:49:36 +0100
+ -- Jonas Meurer <mejo@debian.org>  Mon, 07 Mar 2011 23:52:13 +0100
+
+cryptsetup (2:1.2.0-1) experimental; urgency=low
+
+  * new major upstream release (closes: #603804)
+    - adds text version of FAQ
+    - adds new options --use-random and --use-urandom for MK generation
+    - fixes luksRemoveKey to not ask for remaining keyslot passphrase
+    - no longer supports luksDelKey command (replaced by luksKillSlot)
+    - no longer supports reload command, dmsetup reload should be used instead
+    - adds support to change the UUID later (with --uuid cmd option)
+    - adds --dump-master-key option for luksDump command
+    - no luksOpen, luksFormat and create for open devices (closes: #600208)
+    - remove debian/patches/01_manpage.patch, incorporated upstream
+    - and many more changes, see upstream changelog for further information
+    - update debian/libcryptsetup1.symbols 
+  * invoke update-initramfs at cryptsetup removal in order to not leave behind
+    a broken initramfs. thanks to ubuntu for the hint.
+  * link dynamically against libgcrypt11 and libgpg-error0 now that the
+    libraries have been moved to /lib. add versioned depends for libcryptsetup1
+    on (libgcrypt >= 1.4.6-2) and libgpg-error0 (>= 1.10-0.1).
+  * debian/initramfs/cryptroot-script: prereq 'cryptroot-prepare' added in
+    order to support cryptroot to depend on custom initramfs scripts. thanks
+    to Marc Haber for the suggestion. (closes: #601311)
+  * debian/cryptdisks.functions:
+    + fix check for ownership and permissions of $key to work with slighly
+      different output of 'ls -l' with selinux enabled. (closes: #600522)
+    + fix $TRIES implementation to support TRIES=0 again. (closes: #602501)
+  * change 'echo -e' to 'printf' in debian/initramfs/cryptroot-script. thanks
+    to checkbashisms script devscripts for spotting that bashism.
+  * add a libcryptsetup1-udeb library package for debian-installer in order to
+    satisfy cryptsetup-udeb dependencies with dynamically linked binary.
+    Version the build-depends on libgcrypt11-dev to (>= 1.4.6-3), to satisfy
+    udeb library dependencies.
+  * change 'XC-Package-Type: udeb' to 'Package-Type: udeb' in debian/control
+  * add debian/cryptsetup.apport from Ubuntu, install only for dist=Ubuntu.
+    build-depends on dpkg-dev (>= 1.15.1) is required for this to work.
+
+ -- Jonas Meurer <mejo@debian.org>  Sun, 16 Jan 2011 01:01:03 +0100
 
 cryptsetup (2:1.1.3-4) unstable; urgency=high
 

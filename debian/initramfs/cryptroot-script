@@ -1,5 +1,7 @@
 #!/bin/sh
 
+PREREQ="cryptroot-prepare"
+
 #
 # Standard initramfs preamble
 #
@@ -31,8 +33,6 @@ message()
 {
 	if [ -x /bin/plymouth ] && plymouth --ping; then
 		plymouth message --text="$@"
-	elif [ -p /dev/.initramfs/usplash_outfifo ] && [ -x /sbin/usplash_write ]; then
-		usplash_write "TEXT-URGENT $@"
 	else
 		echo "$@" >&2
 	fi
@@ -70,6 +70,7 @@ parse_options()
 	cryptkey="" # This is only used as an argument to an eventual keyscript
 	crypttries=3
 	cryptrootdev=""
+	cryptdiscard=""
 	CRYPTTAB_OPTIONS=""
 
 	local IFS=" ,"
@@ -120,6 +121,9 @@ parse_options()
 		rootdev)
 			cryptrootdev="yes"
 			;;
+		discard)
+			cryptdiscard="yes"
+			;;
 		esac
 		PARAM="${x%=*}"
 		if [ "$PARAM" = "$x" ]; then
@@ -149,7 +153,7 @@ activate_vg()
 
 	# Detect and activate available volume groups
 	/sbin/lvm vgscan
-	/sbin/lvm vgchange -ay
+	/sbin/lvm vgchange -a y --sysinit
 	return $?
 }
 
@@ -184,7 +188,7 @@ setup_mapping()
 
 	parse_options "$opts" || return 1
 
-	if [ -n "$cryptkeyscript" ] && [ ! -x "$cryptkeyscript" ]; then
+	if [ -n "$cryptkeyscript" ] && ! type "$cryptkeyscript" >/dev/null; then
 		message "cryptsetup: error - script \"$cryptkeyscript\" missing"
 		return 1
 	fi
@@ -218,9 +222,6 @@ setup_mapping()
 		else
 			slumber=${ROOTDELAY}
 		fi
-		if [ -x /sbin/usplash_write ]; then
-			/sbin/usplash_write "TIMEOUT ${slumber}" || true
-		fi
 
 		slumber=$(( ${slumber} * 10 ))
 		while [ ! -e "$cryptsource" ]; do
@@ -234,24 +235,25 @@ setup_mapping()
 		else
 			log_end_msg 1 || true
 		fi
-		if [ -x /sbin/usplash_write ]; then
-			/sbin/usplash_write "TIMEOUT 15" || true
-		fi
  	fi
 	udev_settle
 
 	# We've given up, but we'll let the user fix matters if they can
 	while [ ! -e "${cryptsource}" ]; do
-		echo "	Check cryptopts=source= bootarg cat /proc/cmdline"
-		echo "	or missing modules, devices: cat /proc/modules ls /dev"
+		echo "	Check cryptopts=source= bootarg: cat /proc/cmdline"
+		echo "	or missing modules, devices: cat /proc/modules; ls /dev"
 		panic -r "ALERT!  ${cryptsource} does not exist.  Dropping to a shell!"
 	done
 
 	# Prepare commands
-	if /sbin/cryptsetup isLuks $cryptsource > /dev/null 2>&1; then
-		cryptcreate="/sbin/cryptsetup -T 1 luksOpen $cryptsource $crypttarget"
+	cryptcreate="/sbin/cryptsetup -T 1"
+	if [ "$cryptdiscard" = "yes" ]; then
+		cryptcreate="$cryptcreate --allow-discards"
+	fi
+	if /sbin/cryptsetup isLuks $cryptsource >/dev/null 2>&1; then
+		cryptcreate="$cryptcreate luksOpen $cryptsource $crypttarget"
 	else
-		cryptcreate="/sbin/cryptsetup -T 1 -c $cryptcipher -s $cryptsize -h $crypthash create $crypttarget $cryptsource"
+		cryptcreate="$cryptcreate -c $cryptcipher -s $cryptsize -h $crypthash create $crypttarget $cryptsource"
 	fi
 	cryptremove="/sbin/cryptsetup remove $crypttarget"
 	NEWROOT="/dev/mapper/$crypttarget"
@@ -265,26 +267,23 @@ setup_mapping()
 			/bin/sleep 3
 		fi
 
-		if [ $crypttries -gt 0 ] && [ $count -gt $crypttries ]; then
-			message "cryptsetup: maximum number of tries exceeded for $crypttarget"
-			return 1
-		fi
-
 		if [ -z "$cryptkeyscript" ]; then
 			cryptkey="Unlocking the disk $cryptsource ($crypttarget)\nEnter passphrase: "
 			if [ -x /bin/plymouth ] && plymouth --ping; then
 				cryptkeyscript="plymouth ask-for-password --prompt"
-				cryptkey=$(echo -e "$cryptkey")
+				cryptkey=$(printf "$cryptkey")
 			else
 				cryptkeyscript="/lib/cryptsetup/askpass"
 			fi
 		fi
 
 
-		if ! crypttarget="$crypttarget" cryptsource="$cryptsource" \
-		     $cryptkeyscript "$cryptkey" | $cryptcreate --key-file=- ; then
-			message "cryptsetup: cryptsetup failed, bad password or options?"
-			continue
+		if [ ! -e "$NEWROOT" ]; then
+			if ! crypttarget="$crypttarget" cryptsource="$cryptsource" \
+			     $cryptkeyscript "$cryptkey" | $cryptcreate --key-file=- ; then
+				message "cryptsetup: cryptsetup failed, bad password or options?"
+				continue
+			fi
 		fi
 
 		if [ ! -e "$NEWROOT" ]; then
@@ -292,11 +291,13 @@ setup_mapping()
 			return 1
 		fi
 
-		FSTYPE=''
-		eval $(fstype < "$NEWROOT")
+		#FSTYPE=''
+		#eval $(fstype < "$NEWROOT")
+		FSTYPE="$(blkid -s TYPE -o value "$NEWROOT")"
 
 		# See if we need to setup lvm on the crypto device
-		if [ "$FSTYPE" = "lvm" ] || [ "$FSTYPE" = "lvm2" ]; then
+		#if [ "$FSTYPE" = "lvm" ] || [ "$FSTYPE" = "lvm2" ]; then
+		if [ "$FSTYPE" = "LVM_member" ] || [ "$FSTYPE" = "LVM2_member" ]; then
 			if [ -z "$cryptlvm" ]; then
 				message "cryptsetup: lvm fs found but no lvm configured"
 				return 1
@@ -306,15 +307,16 @@ setup_mapping()
 				return 1
 			fi
 
-			NEWROOT="/dev/mapper/$cryptlvm"
+			NEWROOT=${cmdline_root:-/dev/mapper/$cryptlvm}
 			if [ "$cryptrootdev" = "yes" ]; then
 				# required for lilo to find the root device
-				echo "ROOT=$NEWROOT" >> /conf/param.conf
+				echo "ROOT=$NEWROOT" >>/conf/param.conf
 			fi
 			eval $(fstype < "$NEWROOT")
 		fi
 
-		if [ -z "$FSTYPE" ] || [ "$FSTYPE" = "unknown" ]; then
+		#if [ -z "$FSTYPE" ] || [ "$FSTYPE" = "unknown" ]; then
+		if [ -z "$FSTYPE" ]; then
 			message "cryptsetup: unknown fstype, bad password or options?"
 			udev_settle
 			$cryptremove
@@ -325,6 +327,11 @@ setup_mapping()
 		break
 	done
 
+	if [ $crypttries -gt 0 ] && [ $count -gt $crypttries ]; then
+		message "cryptsetup: maximum number of tries exceeded for $crypttarget"
+		return 1
+	fi
+
 	udev_settle
 	return 0
 }
@@ -334,17 +341,37 @@ setup_mapping()
 #
 
 # Do we have any kernel boot arguments?
-found=''
+cmdline_cryptopts=''
+unset cmdline_root
 for opt in $(cat /proc/cmdline); do
 	case $opt in
 	cryptopts=*)
-		found=yes
-		setup_mapping "${opt#cryptopts=}"
+		opt="${opt#cryptopts=}"
+		if [ -n "$opt" ]; then
+			if [ -n "$cmdline_cryptopts" ]; then
+				cmdline_cryptopts="$cmdline_cryptopts $opt"
+			else
+				cmdline_cryptopts="$opt"
+			fi
+		fi
+		;;
+	root=*)
+		opt="${opt#root=}"
+		case $opt in
+		/*) # Absolute path given. Not lilo major/minor number.
+			cmdline_root=$opt
+			;;
+		*) # lilo major/minor number (See #398957). Ignore
+		esac
 		;;
 	esac
 done
 
-if [ -n "$found" ]; then
+if [ -n "$cmdline_cryptopts" ]; then
+	# Call setup_mapping separately for each possible cryptopts= setting
+	for cryptopt in $cmdline_cryptopts; do
+		setup_mapping "$cryptopt"
+	done
 	exit 0
 fi
 

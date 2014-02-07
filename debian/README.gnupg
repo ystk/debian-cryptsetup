@@ -1,11 +1,11 @@
-gnupg with cryptsetup and LUKS in Debian
-----------------------------------------
+using GnuPG keys for LUKS dm-crypt devices in Debian
+----------------------------------------------------
 
 The Debian cryptsetup package provides the keyscript decrypt_gnupg for setups
-with a gnupg encrypted LUKS keyfile.
+with a GnuPG encrypted LUKS keyfile.
 
 The following example assumes that you store the encrypted keyfile in
-/etc/keys/cryptkey.gpg. LUKS device /dev/<luks_device> needs to be substituted.
+/etc/keys/cryptkey.gpg. LUKS device is /dev/<luks_device>.
 
 First, you'll have to create the encrypted keyfile:
 
@@ -13,18 +13,25 @@ First, you'll have to create the encrypted keyfile:
 	--no-default-keyring --keyring /dev/null --secret-keyring /dev/null \
 	--trustdb-name /dev/null --symmetric --output /etc/keys/cryptkey.gpg
 
-Next the LUKS device needs to be formated with the key:
+Next the LUKS device needs to be formated with the key. For that, the
+decrypt_gnupg keyscript can be used:
 
-# /usr/bin/gpg -q --no-options --no-mdc-warning --no-random-seed-file \
-	--no-default-keyring --keyring /dev/null --secret-keyring /dev/null \
-	--trustdb-name /dev/null --decrypt /etc/keys/cryptkey.gpg | \
-	cryptsetup luksFormat /dev/<luks_device>
+# /lib/cryptsetup/scripts/decrypt_gnupg /etc/keys/crytpkey.gpg | \
+	cryptsetup --key-file=- luksFormat /dev/<luks_device>
 
-In order to unlock the encrypted LUKS device automatically, add the following
-to /etc/crypttab:
+In order to unlock the encrypted LUKS device automatically during boot process,
+add the following to /etc/crypttab:
 
 cdev1	/dev/<luks_device>	/etc/keys/cryptkey.gpg	luks,keyscript=decrypt_gnupg
 
-In case that you want to encrypt the root filesystem with a gnupg encrypted key,
-the initramfs hooks should do all additionally required work for you at initramfs
-creation/update.
+encrypted root filesystem with GnuPG key
+----------------------------------------
+
+In case that you want to encrypt the root filesystem with a GnuPG encrypted key,
+the provided initramfs hooks should do all additionally required work for you
+when the initramfs is created or updated.
+
+Be warned though, that the GnuPG key for encrypted root is copied to the
+initramfs by the initramfs cryptgnupg hook. If you don't want your GnuPG key
+inside the initramfs, you should take a look at the initramfs cryptgnupg hook,
+which is located at /usr/share/initramfs-tools/hooks/cryptgnupg.

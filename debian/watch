@@ -1,4 +1,2 @@
 version=3
-opts="uversionmangle=s/luks-//;s/-pre/~pre/;s/-rc/~rc/, \
-  downloadurlmangle=s#.*(cryptsetup-([\d.]+)\.tar\.bz2).*#http://cryptsetup.googlecode.com/files/$1#,filenamemangle=s#.*(cryptsetup-([\d.]+)\.tar\.bz2).*#$1#" \
-  http://code.google.com/p/cryptsetup/downloads/list ^.*detail\?name=cryptsetup-([\d.]+)\.tar\.bz2.*
+http://code.google.com/p/cryptsetup/downloads/list?can=1 .*/cryptsetup-(\d[\d\.]*)\.(?:zip|tgz|tbz2|txz|tar\.gz|tar\.bz2|tar\.xz)

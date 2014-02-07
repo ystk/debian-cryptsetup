@@ -53,10 +53,9 @@ else
 	LABEL="$1"
 fi
 
-if [ -p /dev/.initramfs/usplash_outfifo ] && [ -x /sbin/usplash_write ]; then
-	# Get pin number from usplash
-	/sbin/usplash_write "INPUTQUIET Enter pin for $crypttarget ($cryptsource): "
-	/usr/bin/pkcs15-tool --read-data-object $LABEL --pin "$(cat /dev/.initramfs/usplash_outfifo)" -o /proc/self/fd/3 3>&1 1>/dev/null 2>&1
+if [ -x /bin/plymouth ] && plymouth --ping; then
+	# Get pin number from plymouth
+	/usr/bin/pkcs15-tool --read-data-object $LABEL --pin "$(plymouth ask-for-password --prompt "Enter pin for $crypttarget ($cryptsource): ")" -o /proc/self/fd/3 3>&1 1>/dev/null 2>&1
 else
 	# Interactive call, user enters pin
 	/usr/bin/pkcs15-tool --read-data-object $LABEL -o /proc/self/fd/3 3>&1 1>/dev/null 2>&1

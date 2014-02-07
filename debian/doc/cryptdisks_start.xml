@@ -38,7 +38,7 @@
   </simpara>
   <simpara>
    Note that this wrapper passes <option>--key-file=-</option> to
-   <command moreinfo="refentry">cryptsetup</command>, so the passphase
+   <command moreinfo="refentry">cryptsetup</command>, so the passphrase
    in any referenced key file must not be followed by a newline character.
   </simpara>
  </refsect1>
