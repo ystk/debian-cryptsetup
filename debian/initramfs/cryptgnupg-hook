@@ -20,7 +20,7 @@ esac
 
 # Hooks for loading gnupg software and key into the initramfs
 
-# Check whether cryptroot hook has installed decrypt_gnupg script 
+# Check whether cryptroot hook has installed decrypt_gnupg script
 if [ ! -x ${DESTDIR}/lib/cryptsetup/scripts/decrypt_gnupg ] ; then
     exit 0
 fi

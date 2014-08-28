@@ -4,8 +4,8 @@
 # persistent data (i.e. not swap or temp devices), then you will lose
 # access to that data permanently if something damages the LUKS header
 # of the LUKS device you derive from. The same applies if you luksFormat
-# the device, even if you use the same passphrase(s). A LUKS header 
-# backup, or better a backup of the data on the derived device may be 
+# the device, even if you use the same passphrase(s). A LUKS header
+# backup, or better a backup of the data on the derived device may be
 # a good idea. See the Cryptsetup FAQ on how to do this right.
 
 countlines() {

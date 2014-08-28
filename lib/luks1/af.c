@@ -9,7 +9,8 @@
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -66,8 +67,13 @@ out:
 
 static int diffuse(char *src, char *dst, size_t size, const char *hash_name)
 {
-	unsigned int digest_size = crypt_hash_size(hash_name);
+	int hash_size = crypt_hash_size(hash_name);
+	unsigned int digest_size;
 	unsigned int i, blocks, padding;
+
+	if (hash_size <= 0)
+		return 1;
+	digest_size = hash_size;
 
 	blocks = size / digest_size;
 	padding = size % digest_size;
@@ -140,4 +146,18 @@ int AF_merge(char *src, char *dst, size_t blocksize,
 out:
 	free(bufblock);
 	return r;
+}
+
+/* Size of final split data including sector alignment */
+size_t AF_split_sectors(size_t blocksize, unsigned int blocknumbers)
+{
+	size_t af_size;
+
+	/* data material * stripes */
+	af_size = blocksize * blocknumbers;
+
+	/* round up to sector */
+	af_size = (af_size + (SECTOR_SIZE - 1)) / SECTOR_SIZE;
+
+	return af_size;
 }

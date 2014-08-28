@@ -1,5 +1,6 @@
 AUTHORS
 FAQ
+docs/*ReleaseNotes
 debian/README.keyctl
 debian/README.gnupg
 debian/README.initramfs

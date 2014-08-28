@@ -6,7 +6,8 @@
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -51,8 +52,6 @@
 #define LUKS_MAGIC {'L','U','K','S', 0xba, 0xbe};
 #define LUKS_MAGIC_L 6
 
-#define LUKS_PHDR_SIZE (sizeof(struct luks_phdr)/SECTOR_SIZE+1)
-
 /* Actually we need only 37, but we don't want struct autoaligning to kick in */
 #define UUID_STRING_L 40
 
@@ -63,6 +62,7 @@
 converted */
 
 struct volume_key;
+struct device_backend;
 
 struct luks_phdr {
 	char		magic[LUKS_MAGIC_L];
@@ -108,11 +108,10 @@ int LUKS_generate_phdr(
 	unsigned int alignOffset,
 	uint32_t iteration_time_ms,
 	uint64_t *PBKDF2_per_sec,
-	const char *metadata_device,
+	int detached_metadata_device,
 	struct crypt_device *ctx);
 
 int LUKS_read_phdr(
-	const char *device,
 	struct luks_phdr *hdr,
 	int require_luks_device,
 	int repair,
@@ -120,36 +119,29 @@ int LUKS_read_phdr(
 
 int LUKS_read_phdr_backup(
 	const char *backup_file,
-	const char *device,
 	struct luks_phdr *hdr,
 	int require_luks_device,
 	struct crypt_device *ctx);
 
 int LUKS_hdr_uuid_set(
-	const char *device,
 	struct luks_phdr *hdr,
 	const char *uuid,
 	struct crypt_device *ctx);
 
 int LUKS_hdr_backup(
 	const char *backup_file,
-	const char *device,
-	struct luks_phdr *hdr,
 	struct crypt_device *ctx);
 
 int LUKS_hdr_restore(
 	const char *backup_file,
-	const char *device,
 	struct luks_phdr *hdr,
 	struct crypt_device *ctx);
 
 int LUKS_write_phdr(
-	const char *device,
 	struct luks_phdr *hdr,
 	struct crypt_device *ctx);
 
 int LUKS_set_key(
-	const char *device,
 	unsigned int keyIndex,
 	const char *password,
 	size_t passwordLen,
@@ -160,7 +152,6 @@ int LUKS_set_key(
 	struct crypt_device *ctx);
 
 int LUKS_open_key_with_hdr(
-	const char *device,
 	int keyIndex,
 	const char *password,
 	size_t passwordLen,
@@ -169,7 +160,6 @@ int LUKS_open_key_with_hdr(
 	struct crypt_device *ctx);
 
 int LUKS_del_key(
-	const char *device,
 	unsigned int keyIndex,
 	struct luks_phdr *hdr,
 	struct crypt_device *ctx);
@@ -178,20 +168,24 @@ crypt_keyslot_info LUKS_keyslot_info(struct luks_phdr *hdr, int keyslot);
 int LUKS_keyslot_find_empty(struct luks_phdr *hdr);
 int LUKS_keyslot_active_count(struct luks_phdr *hdr);
 int LUKS_keyslot_set(struct luks_phdr *hdr, int keyslot, int enable);
+int LUKS_keyslot_area(struct luks_phdr *hdr,
+	int keyslot,
+	uint64_t *offset,
+	uint64_t *length);
 
 int LUKS_encrypt_to_storage(
 	char *src, size_t srcLength,
-	struct luks_phdr *hdr,
+	const char *cipher,
+	const char *cipher_mode,
 	struct volume_key *vk,
-	const char *device,
 	unsigned int sector,
 	struct crypt_device *ctx);
 
 int LUKS_decrypt_from_storage(
 	char *dst, size_t dstLength,
-	struct luks_phdr *hdr,
+	const char *cipher,
+	const char *cipher_mode,
 	struct volume_key *vk,
-	const char *device,
 	unsigned int sector,
 	struct crypt_device *ctx);
 

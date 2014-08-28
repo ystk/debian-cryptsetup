@@ -14,7 +14,7 @@
 # Description:
 ### END INIT INFO
 
-set -e 
+set -e
 
 if [ -r /lib/cryptsetup/cryptdisks.functions ]; then
 	. /lib/cryptsetup/cryptdisks.functions

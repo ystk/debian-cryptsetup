@@ -9,33 +9,30 @@ Just add this script as keyscript to your /etc/crypttab and it will cache the
 passphrase of all cryptab entries with the same identifier.
 
 Either copy decrypt_keyctl into the default search path for keyscripts from
-cryptsetup /lib/cryptdisks/scripts/. So you can just write keyscript=decrypt_keyctl
-in /etc/crypttab, or use a random path of your choice and give the full path
-e.g keyscript=/sbin/decrypt_keyctl.
+cryptsetup /lib/cryptdisks/scripts/. So you can just write
+keyscript=decrypt_keyctl in /etc/crypttab, or use a random path of your choice
+and give the full path e.g keyscript=/sbin/decrypt_keyctl.
 
 
 Requirements
 ------------
 
-    - Debian cryptsetup package with /etc/crypttab handling and keyscript option
-        - Tested with Debian Lenny, Squeeze and Sid
-    - Installed and working keyutils package (keyctl)
-        - Needs CONFIG_KEYS=y in your kernel configuration
-
+  - Debian cryptsetup package with /etc/crypttab handling and keyscript option
+     - Tested with Debian Lenny, Squeeze and Sid
+  - Installed and working keyutils package (keyctl)
+     - Needs CONFIG_KEYS=y in your kernel configuration
 
 What For?
 ---------
 
-The current state for dm-crypt in Linux is that it is single threaded, thus
-every dm-crypt mapping only uses a single core for crypto operations.
-To use the full power of your many-core processor it is thus necessary to split
-the dm-crypt device. For Linux software raid arrays the easiest segmentation is to
-just put the dm-crypt layer below the software raid layer.
+In old (pre 2.6.38) kernels, dm-crypt used to be single threaded. Thus every
+dm-crypt mapping only used a single core for crypto operations. To use the full
+power of your many-core processor it is was necessary to split the dm-crypt
+device. For Linux software raid arrays the easiest segmentation was to just put
+the dm-crypt layer below the software raid layer.
 
-But with a 5 disk raid5 it is a rather daunting task to input the passphrase five
-times.
-This is what this keyscripts solve for you.
-
+But with a 5 disk raid5 it is a rather daunting task to input the passphrase
+five times. This is what this keyscripts solve for you.
 
 Usage
 -----

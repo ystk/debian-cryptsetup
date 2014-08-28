@@ -1,3 +1,132 @@
+cryptsetup (2:1.6.6-1) unstable; urgency=medium
+
+  * new upsream version 1.6.6.
+  * add versioned dependency on cryptsetup-bin to cryptsetup. (closes: #747670)
+  * change versioned build-depends on automake to >= 1.12 to reflect upstream
+    requirements. Thanks to Joel Johnson. (closes: #740688)
+  * build and link against libgcrypt20 (>= 1.6.1). Add note about whirlpool
+    bug in older libgcrypt releases and how to deal with it to debian/NEWS.
+  * add systemd support to askpass. Thanks to David Härdeman for the patch.
+    (closes: #742600, #755074)
+  * fix initramfs cryptroot hook to not include modules unconditionally. Thanks
+    to Dmitrijs Ledkovs for bugreport and patch. (closes: #714104)
+  * fix decrypt_keyctl script to ask again in case of wrong passphrase. Thanks
+    to Dmitriy Matrosov for bugreport and patch. (closes: #748368)
+  * incorporate changes from ubuntu package:
+    - don't hardcode paths to udevadm and udevsettle.
+    - restore terminal settings in askpass.c. (closes: #714942)
+    - migrate upstart jobs to new names.
+
+ -- Jonas Meurer <mejo@debian.org>  Tue, 04 Mar 2014 20:14:07 +0100
+
+cryptsetup (2:1.6.4-4) unstable; urgency=medium
+
+  * really fix plain device opening in initramfs cryptroot script this time.
+    Thanks again to Dirk Griesbach for the patch. (closes: #740592)
+
+ -- Jonas Meurer <mejo@debian.org>  Mon, 03 Mar 2014 21:00:16 +0100
+
+cryptsetup (2:1.6.4-3) unstable; urgency=medium
+
+  * fix plain device opening, broken by switch to new unified open command
+    in 1.6.4-1. Thanks to Dirk Griesbach for the patch. (closes: #740592)
+  * update italian debconf translations, thanks to Italian l10n team and
+    Francesca Ciceri. (closes: #740557)
+  * remove trailing whitespaces from text files.
+  * some minor packaging fixes thanks to lintian checks:
+    - fix VCS-* fields in debian/control to use canoncial URIs.
+    - remove empty directory from libcryptsetup4 package.
+    - add lintian-override for init.d-script-not-included-in-package.
+
+ -- Jonas Meurer <mejo@debian.org>  Sun, 02 Mar 2014 13:51:35 +0100
+
+cryptsetup (2:1.6.4-2) unstable; urgency=medium
+
+  * fix libcryptsetup.so symlink. Thanks to Michael Biebl. (closes: #740484)
+
+ -- Jonas Meurer <mejo@debian.org>  Sun, 02 Mar 2014 01:33:39 +0100
+
+cryptsetup (2:1.6.4-1) unstable; urgency=low
+
+  * new upstream version 1.6.4.
+    - minor fixes in cryptsetup manpage. (closes: #725131)
+    - by default verify new passphrase in luksChangeKey and luksAddKey
+      commands (closes: #728302)
+    - cryptsetup releases are released on kernel.org since 1.6.4. Change
+      debian/watch accordingly.
+  * use compiled defaults for cypher, keysize and hash in luksformat script
+  * improvements to docs (thanks to Christoph Anton Mitterer):
+    - small improvement to explanation for CRYPTTAB_TRIED environment variable
+      in crypttab manpage
+    - update cipher, size and hash settings in examples (closes: #714331)
+    - replace '/dev/hdX' devices with '/dev/sdX' in examples
+    - full path to keyscripts in /lib/cryptsetup/scripts not needed in examples
+  * update init and initramfs scripts to use new open syntax (closes: #714395)
+  * add scripts/local-block/cryptroot in order to support event based block
+    device handling. Thanks to Goswin von Brederlow (closes: #678692)
+  * add support for TCRYPT device handling to cryptdisks init and cryptroot
+    initramfs scripts. (closes: #722509)
+  * improve passphrase prompt in cryptroot initramfs script. Thanks to Joachim
+    Breitner. (closes: #728080)
+  * add support for detached luks header to cryptdisks init script. Thanks to
+    Ximin Luo. (closes: #716652)
+  * enhance docs about remote unlocking feature. Thanks to Karl O. Pinc.
+    (closes: #715487, #714952)
+  * update README.keyctl docs: since linux kernel 2.6.38, dm-crypt is not
+    single-threaded any longer. (closes: #714806)
+  * don't sleep between retries in cryptroot initramfs script. (closes: #715525)
+  * add multi-arch support. Thanks to Shawn Landden. (closes: #696008, #732099)
+  * suggest keyutils. Thanks to Nikolaus Rath. (closes: #734133, #735496)
+  * fix initramfs/cryptroot-hook to support more than one lvm source devices.
+    Thanks to Jens Reinsberger for the patch. (closes: #659688, #737686)
+  * bump standards-version to 3.9.5, no changes needed.
+  * override lintian false positives for init scripts:
+    - init.d-script-does-not-implement-optional-option status
+    - init.d-script-does-not-source-init-functions
+
+ -- Jonas Meurer <mejo@debian.org>  Fri, 28 Jun 2013 12:14:55 +0200
+
+cryptsetup (2:1.6.1-1) unstable; urgency=low
+
+  [ Milan Broz ]
+  * new upstream version. (closes: #704827, 707997)
+    - default LUKS encryption mode is XTS (aes-xts-plain64) (closes: #714331)
+    - adds native support for Truecrypt and compatible on-disk format
+    - adds benchmark command
+    - adds cryptsetup-reencrypt, a tool to offline reencrypt LUKS device
+    - adds veritysetup, a tool for dm-verity block device verification module
+  * install docs/examples into docs at cryptsetup-dev package.
+  * fix compilation warnings in askpass.c.
+
+  [ Steve Langasek ]
+  * fix upstart jobs to not cause boot hangs when actually used in
+    conjunction with startpar.  (closes: #694499, #677712).
+  * in connection with the above, make the cryptdisks-early job explicitly
+    wait for 'umountfs' on shutdown just like cryptdisks does; otherwise,
+    the teardown of the cryptdisks upstart job may cause the cryptdisks-early
+    init script run before we're done unmounting filesystems.
+
+  [ Jonas Meurer ]
+  * minor wording fixes to README.initramfs, suggested by intrigeri and Adam
+    D. Barrett.
+  * add bash-completion script for cryptdisks_{start,stop}. Thanks to Claudius
+    Hubig for providing a patch. (closes: #700777)
+  * support specifying key-slot in crypttab. Thanks to Kevin Locke for the
+    patch. (closes: #704470)
+  * remove evms support code from cryptroot initramfs script. (closes: #713918)
+  * fix location of keyscripts in initramfs documentation. (closes: #697446)
+  * fix a typo in decrypt_ssl script that prevented stdout from beeing
+    redirected to /dev/null. (closes: #700285)
+  * give full path to blkid in crytproot initramfs script. (closes: #697155)
+  * export number of previous tries from cryptroot and cryptdisks to
+    keyscript. Thanks to Laurens Blankers for the idea. Opens the possibility
+    to fallback after a given number of tries for keyscripts. (closes: #438481,
+    #471729, #697455)
+  * improve check for cpu hardware encryption support in initramfs cryptroot
+    hook. (closes: #714326)
+
+ -- Jonas Meurer <mejo@debian.org>  Fri, 28 Jun 2013 12:10:41 +0200
+
 cryptsetup (2:1.4.3-4) unstable; urgency=medium
 
   * change recommends for busybox to busybox | busybox-static. Thanks to
@@ -289,7 +418,7 @@ cryptsetup (2:1.2.0-1) experimental; urgency=low
     - no luksOpen, luksFormat and create for open devices (closes: #600208)
     - remove debian/patches/01_manpage.patch, incorporated upstream
     - and many more changes, see upstream changelog for further information
-    - update debian/libcryptsetup1.symbols 
+    - update debian/libcryptsetup1.symbols
   * invoke update-initramfs at cryptsetup removal in order to not leave behind
     a broken initramfs. thanks to ubuntu for the hint.
   * link dynamically against libgcrypt11 and libgpg-error0 now that the
@@ -364,7 +493,7 @@ cryptsetup (2:1.1.3-1) unstable; urgency=low
   * new upstream release:
     - fix device alignment ioctl calls parameters for archs like ppc64.
     - fix activate_by_* API calls to handle NULL device name as documented
-    - fix udev support for old libdevmapper with not compatible definition 
+    - fix udev support for old libdevmapper with not compatible definition
   * fix rm_lo_setup() in cryptdisks.functions for failed device setup. thanks
     to Roger Pettersson. (closes: #581712)
   * add X-Stop-After headers to cryptdisks(-early) initscripts. this fixes
@@ -433,7 +562,7 @@ cryptsetup (2:1.1.2-1) unstable; urgency=low
       the cryptsetup askpass script
     - start usplash in initramfs, since we need it for fancy passphrase input
     - Set FRAMEBUFFER=y in cryptroot-conf, to pull plymouth into the initramfs
-    - debian/initramfs/cryptroot-hook: Properly anchor our regexps when 
+    - debian/initramfs/cryptroot-hook: Properly anchor our regexps when
       grepping /etc/crypttab so that we don't incorrectly match device names
       that are substrings of one another.
     - debian/initramfs/cryptroot-script: Don't leak /conf/conf.d/cryptroot
@@ -554,7 +683,7 @@ cryptsetup (2:1.1.0~rc2-1) unstable; urgency=low
   * update patch to comply with DEP-3 (http://dep.debian.net/deps/dep3/)
   * fix initramfs/cryptroot-hook to support setups where /dev/mapper/ contains
     symlinks to devices at /dev/dm-*. the lvm2/device-mapper packages had
-    defaults changed to this temporary. it has been fixed in a subsequent 
+    defaults changed to this temporary. it has been fixed in a subsequent
     upload of lvm2 in the meantime, but still it's not a bad idea to be
     prepared for such setups in the future. that way cryproot now supports
     /dev/dm-* devices as well. (closes: #532579, #544487, #544773)
@@ -1487,7 +1616,7 @@ cryptsetup (2:1.0.3-1) unstable; urgency=low
 
   [ David Härdeman ]
   * add lvm capabilities to initramfs scripts (closes: #362564)
-  * add cryptsetup.postinst which executes update-initramfs when 
+  * add cryptsetup.postinst which executes update-initramfs when
     cryptsetup is first installed (not on upgrades)
 
  -- Jonas Meurer <mejo@debian.org>  Sat, 13 May 2006 19:45:08 +0200
@@ -1648,7 +1777,7 @@ cryptsetup (2:1.0.1-11) unstable; urgency=low
 
 cryptsetup (2:1.0.1-10) unstable; urgency=low
 
-  * introduce an epoch to make upgrade happen 
+  * introduce an epoch to make upgrade happen
 
  -- Jonas Meurer <mejo@debian.org>  Sun, 22 Jan 2006 09:02:47 +0100
 
@@ -1675,19 +1804,19 @@ cryptsetup-luks (1.0.1-8) unstable; urgency=low
 
 cryptsetup-luks (1.0.1-7) unstable; urgency=high
 
-  * make cryptsetup create work again (patch for lib/libdevmapper.c) 
+  * make cryptsetup create work again (patch for lib/libdevmapper.c)
 
  -- Michael Gebetsroither <michael.geb@gmx.at>  Sat, 21 Jan 2006 14:39:36 +0100
 
 cryptsetup-luks (1.0.1-6) unstable; urgency=low
 
-  * recompile for new libdevmapper 
+  * recompile for new libdevmapper
 
  -- Michael Gebetsroither <michael.geb@gmx.at>  Tue, 10 Jan 2006 15:10:17 +0100
 
 cryptsetup-luks (1.0.1-5) unstable; urgency=low
 
-  * improved documentation for /etc/crypttab 
+  * improved documentation for /etc/crypttab
 
  -- Michael Gebetsroither <michael.geb@gmx.at>  Mon,  7 Nov 2005 17:05:20 +0100
 
@@ -1706,7 +1835,7 @@ cryptsetup-luks (1.0.1-3) unstable; urgency=low
 
 cryptsetup-luks (1.0.1-2) unstable; urgency=low
 
-  * fixed build dependencies 
+  * fixed build dependencies
 
  -- Michael Gebetsroither <michael.geb@gmx.at>  Mon, 20 Jun 2005 22:30:38 +0200
 
@@ -1730,14 +1859,14 @@ cryptsetup-luks (1.0-4) unstable; urgency=low
 
 cryptsetup-luks (1.0-3) unstable; urgency=low
 
-  * updatet dependencies (libdevmapper1.00 => libdevmapper1.01) 
+  * updatet dependencies (libdevmapper1.00 => libdevmapper1.01)
 
  -- Michael Gebetsroither <michael.geb@gmx.at>  Tue, 19 Apr 2005 13:51:10 +0200
 
 cryptsetup-luks (1.0-2) unstable; urgency=low
 
   * replaced original debian cryptsetup manpage with manpage from
-    cryptsetup-luks 
+    cryptsetup-luks
 
  -- Michael Gebetsroither <michael.geb@gmx.at>  Sun,  3 Apr 2005 13:33:55 +0200
 
@@ -1749,7 +1878,7 @@ cryptsetup-luks (1.0-1) unstable; urgency=low
 
 cryptsetup-luks (0.993-3) unstable; urgency=low
 
-  * fixed dependencis 
+  * fixed dependencis
 
  -- Michael Gebetsroither <michael.geb@gmx.at>  Sun, 13 Feb 2005 01:28:11 +0100
 
@@ -1762,13 +1891,13 @@ cryptsetup-luks (0.993-2) unstable; urgency=low
 
 cryptsetup-luks (0.993-1) unstable; urgency=low
 
-  * synced with luks upstream 
+  * synced with luks upstream
 
  -- Michael Gebetsroither <michael.geb@gmx.at>  Sat, 12 Feb 2005 15:50:21 +0100
 
 cryptsetup-luks (0.992-5) unstable; urgency=low
 
-  * fixed a few problems in den debian source package 
+  * fixed a few problems in den debian source package
 
  -- Michael Gebetsroither <michael.geb@gmx.at>  Sat, 12 Feb 2005 04:22:30 +0100
 
@@ -1787,7 +1916,7 @@ cryptsetup-luks (0.992-3) unstable; urgency=low
 
 cryptsetup-luks (0.992-2) unstable; urgency=low
 
-  * Added note within description 
+  * Added note within description
 
  -- Michael Gebetsroither <michael.geb@gmx.at>  Fri, 11 Feb 2005 18:21:03 +0100
 

@@ -1,3 +1,18 @@
+cryptsetup (2:1.6.4-5) unstable; urgency=medium
+
+  The whirlpool hash implemenation has been broken in gcrypt until version
+  1.5.3. This has been fixed in subsequent gcrypt releases. In particular,
+  the gcrypt version that is used by cryptsetup starting with this release,
+  has the bug fixed. Consequently, LUKS containers created with broken
+  whirlpool will fail to open from now on.
+
+  In the case that you're affected by the whirlpool bug, please read section
+  '8.3 Gcrypt after 1.5.3 breaks Whirlpool' of the cryptsetup FAQ at
+  https://code.google.com/p/cryptsetup/wiki/FrequentlyAskedQuestions carefully.
+  It explains how to open your LUKS container and reencrypt it afterwards.
+
+ -- Jonas Meurer <mejo@debian.org>  Tue, 04 Mar 2014 23:17:37 +0100
+
 cryptsetup (2:1.1.3-1) unstable; urgency=low
 
   Cryptdisks init scripts changed their behaviour for failures at starting and
@@ -87,7 +102,7 @@ cryptsetup (2:1.0.6~pre1+svn45-1) unstable; urgency=low
   from sha256 to ripemd160 for consistency with the cryptsetup default. If you
   have followed the recommendation to configure the hash in /etc/crypttab this
   change will have no effect on you.
-  
+
   If you set up disk encryption on your system using the Debian installer
   and/or if you use LUKS encryption, everything is already set up correctly
   and you don't need to do anything.
@@ -100,7 +115,7 @@ cryptsetup (2:1.0.6~pre1+svn45-1) unstable; urgency=low
 cryptsetup (2:1.0.5-2) unstable; urgency=low
 
   The vol_id and un_vol_id check scripts no longer regard minix as a valid
-  filesystem, since random data can be mistakenly identified as a minix 
+  filesystem, since random data can be mistakenly identified as a minix
   filesystem due to an inadequate signature length.
 
   If you use minix filesystems, you should not rely on prechecks anymore.

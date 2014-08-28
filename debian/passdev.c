@@ -51,7 +51,6 @@ static bool
 do_mount(const char *device, const char *dir)
 {
 	pid_t pid;
-	pid_t wpid;
 	int status;
 	char *fstypes[] = { "ext4", "ext3", "ext2", "vfat", "btrfs", "reiserfs", "xfs", "jfs", "ntfs", "iso9660", "udf" };
 	int fsindex;
@@ -70,7 +69,7 @@ do_mount(const char *device, const char *dir)
 		} else if (pid > 0) {
 			/* We're in the parent process */
 			do {
-				wpid = waitpid(pid, &status, 0);
+				waitpid(pid, &status, 0);
 			} while (!WIFEXITED(status) && !WIFSIGNALED(status));
 			if (WIFEXITED(status) && WEXITSTATUS(status) == EXIT_SUCCESS)
 				return true;
@@ -119,7 +118,7 @@ main(int argc, char **argv, char **envp)
 	size_t byteswritten;
 	ssize_t bytes;
 	char *to;
-	int timeout;
+	int timeout = 0;
 	bool do_timeout = false;
 
 	/* We only take one argument */

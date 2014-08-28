@@ -30,6 +30,9 @@ parse_opts () {
 	# Strip comments - https://bugs.launchpad.net/bugs/185380
 	opts=$(echo -n $1 | sed 's/ *#.*//')
 	PARAMS=""
+	LUKSPARAMS=""
+	LUKSHEADER=""
+	TCRYPTPARAMS=""
 	PLAINPARAMS=""
 	CHECK=""
 	CHECKARGS=""
@@ -38,6 +41,7 @@ parse_opts () {
 	TMPFS=""
 	MAKESWAP=""
 	USELUKS=""
+	USETCRYPT=""
 	KEYSCRIPT=""
 	IGNORE=""
 	CRYPTTAB_OPTIONS=""
@@ -49,8 +53,8 @@ parse_opts () {
 	for opt in $opts; do
 		PARAM=$(echo "$opt" | sed 's/=.*//')
 		VALUE=$(echo "$opt" | sed '/=/!d;s/^.*=//')
-		
-		case "$PARAM" in 
+
+		case "$PARAM" in
 		readonly)
 			PARAMS="$PARAMS -r"
 			;;
@@ -147,6 +151,17 @@ parse_opts () {
 		luks)
 			USELUKS="yes"
 			;;
+		luksheader)
+			if [ -z "$VALUE" ]; then
+				log_warning_msg "$dst: no value for luksheader option, skipping"
+				return 1
+			fi
+			LUKSPARAMS="$LUKSPARAMS --header=$VALUE"
+			LUKSHEADER="$VALUE"
+			;;
+		tcrypt)
+			USETCRYPT="yes"
+			;;
 		noearly)
 			if [ "$INITSTATE" = "early" ]; then
 				IGNORE="yes"
@@ -180,6 +195,16 @@ parse_opts () {
 				log_warning_msg "script $VALUE is not an executable script, skipping"
 				return 1
 			fi
+			;;
+		keyslot)
+			if [ -z "$VALUE" ]; then
+				log_warning_msg "$dst: no value for keyslot option, skipping"
+				return 1
+			fi
+			LUKSPARAMS="$LUKSPARAMS --key-slot $VALUE"
+			;;
+		tcrypthidden)
+			TCRYPTPARAMS="$TCRYPTPARAMS --tcrypt-hidden"
 			;;
 		esac
 
@@ -218,6 +243,12 @@ check_key () {
 		return 1
 	fi
 
+	# TCRYPT requires a persistent key, /dev/*random is not supported
+	if [ "$TCRYPT" = "yes" ] && [ "$key" != "${key%random}" ]; then
+		log_warning_msg "$dst: TCRYPT does not work with random data as key"
+		return 1
+	fi
+
 	# Check ownership of $key
 	OWNER="$(/bin/ls -l "$(readlink -f $key)" | sed 's/^.\{10\}[+\.]\?.[^[:space:]]* \([^[:space:]]*\).*/\1/')"
 	if [ "$OWNER" != "root" ]; then
@@ -251,8 +282,8 @@ do_luks () {
 	tried=0
 	keyscriptarg=""
 
-	if ! cryptsetup isLuks "$src" >/dev/null 2>&1; then
-		log_warning_msg "$dst: device '$src' is not a LUKS partition, skipping"
+	if ! cryptsetup isLuks "${LUKSHEADER:-$src}" >/dev/null 2>&1; then
+		log_warning_msg "$dst: device '${LUKSHEADER:-$src}' is not a LUKS partition, skipping"
 		return 1
 	fi
 
@@ -285,12 +316,80 @@ do_luks () {
 	PARAMS="$PARAMS --key-file=$key"
 
 	while [ "$tried" -lt "$TRIES" ] || [ "$TRIES" -eq "0" ]; do
+		export CRYPTTAB_TRIED="$tried"
 		if [ -n "$KEYSCRIPT" ]; then
-			if $KEYSCRIPT "$keyscriptarg" | cryptsetup $PARAMS luksOpen "$src" "${dst}_unformatted"; then
+			if $KEYSCRIPT "$keyscriptarg" | cryptsetup $PARAMS $LUKSPARAMS open --type luks "$src" "${dst}_unformatted"; then
 				break
 			fi
 		else
-			if cryptsetup $PARAMS luksOpen "$src" "${dst}_unformatted"; then
+			if cryptsetup $PARAMS $LUKSPARAMS open --type luks "$src" "${dst}_unformatted"; then
+				break
+			fi
+		fi
+
+		tried=$(( $tried + 1 ))
+		if [ "$tried" -ge "$TRIES" ] && [ "$TRIES" -ne "0" ]; then
+			return 1
+		fi
+	done
+
+	if [ -n "$CHECK" ] && ! "$CHECK" "/dev/mapper/${dst}_unformatted" $CHECKARGS; then
+		log_warning_msg "$dst: the check for '/dev/mapper/$dst' failed"
+		cryptsetup luksClose "${dst}_unformatted"
+		return 1
+	fi
+
+	return 0
+}
+
+# Setup a tcrypt mapping
+do_tcrypt () {
+	local tried keyscriptarg
+	tried=0
+	keyscriptarg=""
+
+	if ! pre_out="$($PRECHECK "$src" 2>/dev/null)" && \
+	   ! /lib/cryptsetup/checks/blkid "$src" swap >/dev/null; then
+		log_warning_msg "$dst: the precheck for '$src' failed: $pre_out"
+		return 1
+	fi
+
+	if [ -n "$KEYSCRIPT" ]; then
+		# keyscript => "key" is just an argument to the keyscript
+		keyscriptarg="$key"
+		key="-"
+	elif [ -z "$key" ]; then
+		# no keyscript, no key => password
+		keyscriptarg="Unlocking the disk $src ($dst)\nEnter passphrase: "
+		key="-"
+		if [ -x /bin/plymouth ] && plymouth --ping; then
+			KEYSCRIPT="plymouth ask-for-password --prompt"
+			keyscriptarg=$(printf "$keyscriptarg")
+		else
+			KEYSCRIPT="/lib/cryptsetup/askpass"
+		fi
+	elif [ "$key" != "${key%/dev/*}" ]; then
+		# no keyscript, device key => special treatment
+		keyscriptarg=""
+		key="$key"
+		KEYSCRIPT=""
+	else
+		# no keyscript, key => file input
+		keyscriptarg="$key"
+		key="-"
+		KEYSCRIPT="cat"
+	fi
+
+	PARAMS="$PARAMS --key-file=$key"
+
+	while [ "$tried" -lt "$TRIES" ] || [ "$TRIES" -eq "0" ]; do
+		export CRYPTTAB_TRIED="$tried"
+		if [ -n "$KEYSCRIPT" ]; then
+			if $KEYSCRIPT "$keyscriptarg" | cryptsetup $PARAMS $TCRYPTPARAMS open --type tcrypt "$src" "${dst}_unformatted"; then
+				break
+			fi
+		else
+			if cryptsetup $PARAMS $TCRYPTPARAMS open --type tcrypt "$src" "${dst}_unformatted"; then
 				break
 			fi
 		fi
@@ -350,10 +449,11 @@ do_noluks () {
 	PARAMS="$PARAMS --key-file=$key"
 
 	while [ "$tried" -lt "$TRIES" ]; do
+		export CRYPTTAB_TRIED="$tried"
 		if [ -n "$KEYSCRIPT" ]; then
-			$KEYSCRIPT "$keyscriptarg" | cryptsetup $PLAINPARAMS $PARAMS create "${dst}_unformatted" "$src"
+			$KEYSCRIPT "$keyscriptarg" | cryptsetup $PLAINPARAMS $PARAMS open --type plain "$src" "${dst}_unformatted"
 		else
-			cryptsetup $PLAINPARAMS $PARAMS create "${dst}_unformatted" "$src"
+			cryptsetup $PLAINPARAMS $PARAMS open --type plain "$src" "${dst}_unformatted"
 		fi
 
 		if [ -z "$CHECK" ] || "$CHECK" "/dev/mapper/${dst}_unformatted" $CHECKARGS; then
@@ -430,7 +530,7 @@ do_tmp () {
 # Rename the device from its temp name to its final name, which will
 # trigger mountall
 finalize_device () {
-	if [ -x /sbin/udevadm ]; then
+	if command -v udevadm >/dev/null 2>&1; then
         	udevadm settle
     	fi
     	dmsetup rename "${dst}_unformatted" "$dst"
@@ -534,6 +634,8 @@ handle_crypttab_line_start () {
 	result="ok"
 	if [ "$USELUKS" = "yes" ]; then
 		do_luks || result="fail"
+	elif [ "$USETCRYPT" = "yes" ]; then
+		do_tcrypt || result="fail"
 	else
 		do_noluks || result="fail"
 	fi
@@ -584,7 +686,7 @@ handle_crypttab_line_stop () {
 		device_msg "$dst" "error"
 		return 1
 	fi
-	
+
 	do_close || return $?
 
 	device_msg "$dst" "stopping"

@@ -2,18 +2,20 @@
  * loop-AES compatible volume handling
  *
  * Copyright (C) 2011-2012, Red Hat, Inc. All rights reserved.
+ * Copyright (C) 2011-2013, Milan Broz
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * This file is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this file; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
@@ -73,16 +75,16 @@ static int hash_keys(struct crypt_device *cd,
 		     const char *hash_override,
 		     const char **input_keys,
 		     unsigned int keys_count,
-		     unsigned int key_len_output)
+		     unsigned int key_len_output,
+		     unsigned int key_len_input)
 {
 	const char *hash_name;
 	char tweak, *key_ptr;
-	unsigned i, key_len_input;
+	unsigned int i;
 	int r;
 
 	hash_name = hash_override ?: get_hash(key_len_output);
 	tweak = get_tweak(keys_count);
-	key_len_input = strlen(input_keys[0]);
 
 	if (!keys_count || !key_len_output || !hash_name || !key_len_input) {
 		log_err(cd, _("Key processing error (using hash %s).\n"),
@@ -132,9 +134,10 @@ int LOOPAES_parse_keyfile(struct crypt_device *cd,
 			  size_t buffer_len)
 {
 	const char *keys[LOOPAES_KEYS_MAX];
-	unsigned i, key_index, key_len, offset;
+	unsigned int key_lengths[LOOPAES_KEYS_MAX];
+	unsigned int i, key_index, key_len, offset;
 
-	log_dbg("Parsing loop-AES keyfile of size %d.", buffer_len);
+	log_dbg("Parsing loop-AES keyfile of size %zu.", buffer_len);
 
 	if (!buffer_len)
 		return -EINVAL;
@@ -152,33 +155,45 @@ int LOOPAES_parse_keyfile(struct crypt_device *cd,
 
 	offset = 0;
 	key_index = 0;
+	key_lengths[0] = 0;
 	while (offset < buffer_len && key_index < LOOPAES_KEYS_MAX) {
-		keys[key_index++] = &buffer[offset];
-		while (offset < buffer_len && buffer[offset])
+		keys[key_index] = &buffer[offset];
+		key_lengths[key_index] = 0;;
+		while (offset < buffer_len && buffer[offset]) {
 			offset++;
+			key_lengths[key_index]++;
+		}
+		if (offset == buffer_len) {
+			log_dbg("Unterminated key #%d in keyfile.", key_index);
+			log_err(cd, _("Incompatible loop-AES keyfile detected.\n"));
+			return -EINVAL;
+		}
 		while (offset < buffer_len && !buffer[offset])
 			offset++;
+		key_index++;
 	}
 
 	/* All keys must be the same length */
-	key_len = key_index ? strlen(keys[0]) : 0;
+	key_len = key_lengths[0];
 	for (i = 0; i < key_index; i++)
-		if (key_len != strlen(keys[i])) {
+		if (!key_lengths[i] || (key_lengths[i] != key_len)) {
 			log_dbg("Unexpected length %d of key #%d (should be %d).",
-				strlen(keys[i]), i, key_len);
+				key_lengths[i], i, key_len);
 			key_len = 0;
 			break;
 		}
 
-	log_dbg("Keyfile: %d keys of length %d.", key_index, key_len);
 	if (offset != buffer_len || key_len == 0 ||
 	   (key_index != 1 && key_index !=64 && key_index != 65)) {
 		log_err(cd, _("Incompatible loop-AES keyfile detected.\n"));
 		return -EINVAL;
 	}
 
+	log_dbg("Keyfile: %d keys of length %d.", key_index, key_len);
+
 	*keys_count = key_index;
-	return hash_keys(cd, vk, hash, keys, key_index, crypt_get_volume_key_size(cd));
+	return hash_keys(cd, vk, hash, keys, key_index,
+			 crypt_get_volume_key_size(cd), key_len);
 }
 
 int LOOPAES_activate(struct crypt_device *cd,
@@ -192,18 +207,20 @@ int LOOPAES_activate(struct crypt_device *cd,
 	uint32_t req_flags;
 	int r;
 	struct crypt_dm_active_device dmd = {
-		.device = crypt_get_device_name(cd),
-		.cipher = NULL,
-		.uuid   = crypt_get_uuid(cd),
-		.vk    = vk,
-		.offset = crypt_get_data_offset(cd),
-		.iv_offset = crypt_get_iv_offset(cd),
+		.target = DM_CRYPT,
 		.size   = 0,
-		.flags  = flags
+		.flags  = flags,
+		.data_device = crypt_data_device(cd),
+		.u.crypt  = {
+			.cipher = NULL,
+			.vk     = vk,
+			.offset = crypt_get_data_offset(cd),
+			.iv_offset = crypt_get_iv_offset(cd),
+		}
 	};
 
-
-	r = device_check_and_adjust(cd, dmd.device, DEV_EXCL, &dmd.size, &dmd.offset, &flags);
+	r = device_block_adjust(cd, dmd.data_device, DEV_EXCL,
+				dmd.u.crypt.offset, &dmd.size, &dmd.flags);
 	if (r)
 		return r;
 
@@ -217,12 +234,13 @@ int LOOPAES_activate(struct crypt_device *cd,
 	if (r < 0)
 		return -ENOMEM;
 
-	dmd.cipher = cipher;
-	log_dbg("Trying to activate loop-AES device %s using cipher %s.", name, dmd.cipher);
+	dmd.u.crypt.cipher = cipher;
+	log_dbg("Trying to activate loop-AES device %s using cipher %s.",
+		name, dmd.u.crypt.cipher);
 
-	r = dm_create_device(name, CRYPT_LOOPAES, &dmd, 0);
+	r = dm_create_device(cd, name, CRYPT_LOOPAES, &dmd, 0);
 
-	if (!r && !(dm_flags() & req_flags)) {
+	if (r < 0 && !(dm_flags() & req_flags)) {
 		log_err(cd, _("Kernel doesn't support loop-AES compatible mapping.\n"));
 		r = -ENOTSUP;
 	}

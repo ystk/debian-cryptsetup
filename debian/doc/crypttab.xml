@@ -31,9 +31,9 @@
    and not written; it is the duty of the system
    administrator to properly create and maintain this file. Each filesystem is
    described on a separate line; fields on each line are separated by tabs or
-   spaces. Lines starting with <quote>#</quote> are comments, empty lines are 
+   spaces. Lines starting with <quote>#</quote> are comments, empty lines are
    ignored. The order of records in <filename>crypttab</filename> is important
-   because the init scripts sequentially iterate through 
+   because the init scripts sequentially iterate through
    <filename>crypttab</filename> doing their thing.
   </simpara>
   <simpara>
@@ -64,16 +64,16 @@
    support random data keys.
   </simpara>
   <simpara>
-   If the <emphasis>key file</emphasis> is the string <quote>none</quote>, 
+   If the <emphasis>key file</emphasis> is the string <quote>none</quote>,
    a passphrase will be read interactively from the console. In this case, the
    options precheck, check, checkargs and tries may be useful.
   </simpara>
   <simpara>
    The fourth field, <emphasis>options</emphasis>, describes the cryptsetup
    options associated with the encryption process. At minimum, the field should
-   contain either the string <emphasis>luks</emphasis> or the
-   <emphasis>cipher</emphasis>, <emphasis>hash</emphasis> and
-   <emphasis>size</emphasis> options.
+   contain either the string <emphasis>luks</emphasis> respectively
+   <emphasis>tcrypt</emphasis> or the <emphasis>cipher</emphasis>,
+   <emphasis>hash</emphasis> and <emphasis>size</emphasis> options.
   </simpara>
   <simpara>
    Options are in the format: <emphasis>key</emphasis>=<emphasis>value</emphasis>
@@ -94,7 +94,7 @@
     <term><emphasis>cipher</emphasis>=&lt;cipher&gt;</term>
     <listitem>
      <simpara>
-      Encryption algorithm (ignored for LUKS devices). See <command>cryptsetup -c</command>.
+      Encryption algorithm (ignored for LUKS and TCRYPT devices). See <command>cryptsetup -c</command>.
      </simpara>
     </listitem>
    </varlistentry>
@@ -103,7 +103,7 @@
     <term><emphasis>size</emphasis>=&lt;size&gt;</term>
     <listitem>
      <simpara>
-      Encryption key size (ignored for LUKS devices). See <command>cryptsetup -s</command>.
+      Encryption key size (ignored for LUKS and TCRYPT devices). See <command>cryptsetup -s</command>.
      </simpara>
     </listitem>
    </varlistentry>
@@ -112,7 +112,7 @@
     <term><emphasis>hash</emphasis>=&lt;hash&gt;</term>
     <listitem>
      <simpara>
-      Hash algorithm (ignored for LUKS devices). See <command>cryptsetup -h</command>.
+      Hash algorithm (ignored for LUKS and TCRYPT devices). See <command>cryptsetup -h</command>.
      </simpara>
     </listitem>
    </varlistentry>
@@ -121,7 +121,7 @@
     <term><emphasis>offset</emphasis>=&lt;offset&gt;</term>
     <listitem>
      <simpara>
-      Start offset (ignored for LUKS devices). Uses <emphasis role="strong">cryptsetup -o</emphasis>.
+      Start offset (ignored for LUKS and TCRYPT devices). Uses <emphasis role="strong">cryptsetup -o</emphasis>.
      </simpara>
     </listitem>
    </varlistentry>
@@ -130,7 +130,7 @@
     <term><emphasis>skip</emphasis>=&lt;skip&gt;</term>
     <listitem>
      <simpara>
-      Skip sectors at the beginning (ignored for LUKS devices). Uses <emphasis role="strong">cryptsetup -p</emphasis>.
+      Skip sectors at the beginning (ignored for LUKS and TCRYPT devices). Uses <emphasis role="strong">cryptsetup -p</emphasis>.
      </simpara>
     </listitem>
    </varlistentry>
@@ -170,6 +170,13 @@
     <term><emphasis>luks</emphasis></term>
     <listitem>
      <simpara>Use device with LUKS extensions.</simpara>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><emphasis>tcrypt</emphasis></term>
+    <listitem>
+     <simpara>Use device with TCRYPT extensions.</simpara>
     </listitem>
    </varlistentry>
 
@@ -253,10 +260,10 @@
    <varlistentry>
     <term><emphasis>noearly</emphasis></term>
     <listitem>
-     <simpara>The cryptsetup init scripts are invoked twice during the boot 
-      process - once before lvm, evms, raid, etc. are started and once again
-      after that. Sometimes you need to start your encrypted disks in a special
-      order. With this option the device is ignored during the first invokation
+     <simpara>The cryptsetup init scripts are invoked twice during the boot
+      process - once before lvm, raid, etc. are started and once again after
+      that. Sometimes you need to start your encrypted disks in a special
+      order. With this option the device is ignored during the first invocation
       of the cryptsetup init scripts.
      </simpara>
     </listitem>
@@ -328,6 +335,13 @@
         </para></listitem>
        </varlistentry>
        <varlistentry>
+        <term>CRYPTTAB_TRIED</term>
+        <listitem><para>
+	 Number of previous tries since start of cryptdisks (counts until
+         maximum number of tries is reached).
+        </para></listitem>
+       </varlistentry>
+       <varlistentry>
         <term>CRYPTTAB_OPTIONS</term>
         <listitem><para>
 	 A list of exported crypttab options
@@ -343,6 +357,24 @@
 
       </variablelist>
      </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><emphasis>keyslot</emphasis>=&lt;slot&gt;</term>
+    <listitem>
+     <simpara>
+       Key slot (ignored for non-LUKS devices). See <command>cryptsetup -S</command>.
+     </simpara>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><emphasis>tcrypthidden</emphasis></term>
+    <listitem>
+     <simpara>
+       Use hidden TCRYPT header (ignored for non-TCRYPT devices).
+     </simpara>
     </listitem>
    </varlistentry>
 
@@ -400,23 +432,26 @@
   <para>
    <screen>
 # Encrypted swap device
-cswap /dev/sda6 /dev/urandom cipher=aes-cbc-essiv:sha256,hash=ripemd160,size=256,swap
-    
+cswap /dev/sda6 /dev/urandom cipher=aes-xts-plain64,size=256,hash=sha1,swap
+
 # Encrypted LUKS disk with interactive password, identified by UUID
 cdisk0 UUID=12345678-9abc-def012345-6789abcdef01 none luks
-    
+
+# Encrypted TCRYPT disk with interactive password
+tdisk0 /dev/sr0 none tcrypt
+
 # Encrypted ext4 disk with interactive password
 # - retry 5 times if the check fails
-cdisk1 /dev/sda2 none cipher=aes-cbc-essiv:sha256,hash=ripemd160,size=256,checkargs=ext4,tries=5
+cdisk1 /dev/sda2 none cipher=aes-xts-plain64,size=256,hash=sha1,checkargs=ext4,tries=5
 
 # Encrypted disk with interactive password
 # - use a nondefault check script
 # - no retries
-cdisk2 /dev/hdc1 none cipher=aes-cbc-essiv:sha256,hash=ripemd160,size=256,check=customscript,tries=1
+cdisk2 /dev/sdc1 none cipher=aes-xts-plain64,size=256,hash=sha1,check=customscript,tries=1
 
 # Encrypted disk with interactive password
-# - twofish as the cipher
-cdisk3 /dev/sda3 none cipher=twofish,hash=ripemd160,size=256
+# - Twofish as the cipher, RIPEMD-160 as the hash
+cdisk3 /dev/sda3 none cipher=twofish,size=256,hash=ripemd160
    </screen>
   </para>
  </refsect1>

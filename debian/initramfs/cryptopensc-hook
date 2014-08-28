@@ -20,7 +20,7 @@ esac
 
 # Hooks for loading smartcard reading software into the initramfs
 
-# Check whether cryptroot hook has installed decrypt_opensc script 
+# Check whether cryptroot hook has installed decrypt_opensc script
 if [ ! -x ${DESTDIR}/lib/cryptsetup/scripts/decrypt_opensc ] ; then
     exit 0
 fi
@@ -50,7 +50,7 @@ done
 
 # Install pcscd daemon, drivers, conf file, and include libgcc as well since
 # pcscd utilizes pthread_cancel
-copy_exec /usr/sbin/pcscd 
+copy_exec /usr/sbin/pcscd
 cp -r /usr/lib/pcsc ${DESTDIR}/usr/lib
 cp /etc/reader.conf ${DESTDIR}/etc
 

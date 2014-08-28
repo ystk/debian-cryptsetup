@@ -2,18 +2,20 @@
  * Nettle crypto backend implementation
  *
  * Copyright (C) 2011-2012 Red Hat, Inc. All rights reserved.
+ * Copyright (C) 2011-2014, Milan Broz
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * This file is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this file; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
@@ -22,6 +24,7 @@
 #include <errno.h>
 #include <nettle/sha.h>
 #include <nettle/hmac.h>
+#include <nettle/pbkdf2.h>
 #include "crypto_backend.h"
 
 static char *version = "Nettle";
@@ -263,8 +266,8 @@ int crypt_hmac_final(struct crypt_hmac *ctx, char *buffer, size_t length)
 int crypt_hmac_destroy(struct crypt_hmac *ctx)
 {
 	memset(ctx->key, 0, ctx->key_length);
-	memset(ctx, 0, sizeof(*ctx));
 	free(ctx->key);
+	memset(ctx, 0, sizeof(*ctx));
 	free(ctx);
 	return 0;
 }
@@ -273,4 +276,30 @@ int crypt_hmac_destroy(struct crypt_hmac *ctx)
 int crypt_backend_rng(char *buffer, size_t length, int quality, int fips)
 {
 	return -EINVAL;
+}
+
+/* PBKDF */
+int crypt_pbkdf(const char *kdf, const char *hash,
+		const char *password, size_t password_length,
+		const char *salt, size_t salt_length,
+		char *key, size_t key_length,
+		unsigned int iterations)
+{
+	struct crypt_hmac *h;
+	int r;
+
+	if (!kdf || strncmp(kdf, "pbkdf2", 6))
+		return -EINVAL;
+
+	r = crypt_hmac_init(&h, hash, password, password_length);
+	if (r < 0)
+		return r;
+
+	nettle_pbkdf2(&h->nettle_ctx, h->hash->nettle_hmac_update,
+		      h->hash->nettle_hmac_digest, h->hash->length, iterations,
+		      salt_length, (const uint8_t *)salt, key_length,
+		      (uint8_t *)key);
+	crypt_hmac_destroy(h);
+
+	return 0;
 }

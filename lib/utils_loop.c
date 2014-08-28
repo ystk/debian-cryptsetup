@@ -2,10 +2,12 @@
  * loopback block device utilities
  *
  * Copyright (C) 2011-2012, Red Hat, Inc. All rights reserved.
+ * Copyright (C) 2009-2012, Milan Broz
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,6 +27,7 @@
 #include <limits.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <linux/loop.h>
 
 #include "utils_loop.h"
@@ -43,13 +46,10 @@ static char *crypt_loop_get_device_old(void)
 {
 	char dev[20];
 	int i, loop_fd;
-	struct stat st;
 	struct loop_info64 lo64 = {0};
 
 	for (i = 0; i < 256; i++) {
 		sprintf(dev, "/dev/loop%d", i);
-		if (stat(dev, &st) || !S_ISBLK(st.st_mode))
-			return NULL;
 
 		loop_fd = open(dev, O_RDONLY);
 		if (loop_fd < 0)

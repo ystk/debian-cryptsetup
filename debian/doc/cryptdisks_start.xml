@@ -46,7 +46,7 @@
  <refsect1 id="cryptdisks_start.see_also">
   <title>SEE ALSO</title>
   <simpara>
-   <emphasis>cryptdisks_stop</emphasis>(8), 
+   <emphasis>cryptdisks_stop</emphasis>(8),
    <emphasis>cryptsetup</emphasis>(8), <emphasis>crypttab</emphasis>(5)
   </simpara>
  </refsect1>

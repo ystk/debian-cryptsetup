@@ -140,6 +140,80 @@ reread:
 	goto again;
 }
 
+/*****************************************************************************
+ * systemd functions                                                         *
+ *****************************************************************************/
+
+#define SYSTEMD_ASKPASS "/bin/systemd-ask-password"
+static pid_t systemdpid;
+static size_t systemdused = 0;
+static size_t systemdsize = 0;
+static char *systemdbuf = NULL;
+
+static int
+systemd_prepare(const char *prompt)
+{
+	struct stat a, b;
+	int pipefds[2];
+
+	/* is systemd running? */
+	if (lstat("/sys/fs/cgroup", &a) < 0)
+		return -1;
+	if (lstat("/sys/fs/cgroup/systemd", &b) < 0)
+		return -1;
+	if (a.st_dev == b.st_dev)
+		return -1;
+
+	if (access(SYSTEMD_ASKPASS, X_OK))
+		return -1;
+
+	if (pipe(pipefds))
+		return -1;
+
+	systemdpid = fork();
+	if (systemdpid < 0) {
+		close(pipefds[0]);
+		close(pipefds[1]);
+		return -1;
+	}
+
+	if (systemdpid == 0) {
+		close(pipefds[0]);
+		if (dup2(pipefds[1], STDOUT_FILENO) < 0)
+			exit(EXIT_FAILURE);
+		execl(SYSTEMD_ASKPASS, SYSTEMD_ASKPASS,
+		      "--timeout=0", prompt, (char*)NULL);
+		exit(EXIT_FAILURE);
+	}
+
+	close(pipefds[1]);
+	return pipefds[0];
+}
+
+static bool
+systemd_read(int fd, char **buf, size_t *size)
+{
+	debug("In systemd_read\n");
+	if (fifo_common_read(fd, &systemdbuf, &systemdused, &systemdsize)) {
+		*buf = systemdbuf;
+		*size = systemdused;
+		/* systemd likes to include the terminating newline */
+		if (systemdused > 1 && systemdbuf[systemdused - 1] == '\n') {
+			systemdbuf[systemdused - 1] = '\0';
+			systemdused--;
+		}
+		return true;
+	}
+
+	return false;
+}
+
+static void
+systemd_finish(int fd)
+{
+	kill(systemdpid, SIGTERM);
+	fifo_common_finish(fd, &systemdbuf, &systemdused, &systemdsize);
+}
 
 /*****************************************************************************
  * splashy functions                                                         *
@@ -170,7 +244,7 @@ splashy_prepare(const char *prompt)
 
 	iov[0].iov_base = "getpass ";
 	iov[0].iov_len = strlen ("getpass ");
-	iov[1].iov_base = prompt;
+	iov[1].iov_base = (char *)prompt;
 	iov[1].iov_len = strlen (prompt) + 1;
 
 	if (writev (fd, iov, 2) == -1) {
@@ -297,7 +371,7 @@ static int
 console_prepare(const char *prompt)
 {
 	struct termios term_new;
-	char *prompt_ptr = prompt;
+	const char *prompt_ptr = prompt;
 	char *newline = NULL;
 
 	if (!isatty(STDIN_FILENO)) {
@@ -366,15 +440,17 @@ struct method {
 	int (*prepare)(const char *prompt);
 	bool (*read)(int fd, char **buf, size_t *size);
 	void (*finish)(int fd);
+	bool no_more;
 	bool active;
 	bool enabled;
 	int fd;
 };
 
 static struct method methods[] = {
-	{ "splashy", splashy_prepare, splashy_read, splashy_finish, false, true, -1 },
-	{ "fifo", fifo_prepare, fifo_read, fifo_finish, false, true, -1 },
-	{ "console", console_prepare, console_read, console_finish, false, true, -1 }
+	{ "systemd", systemd_prepare, systemd_read, systemd_finish, true, false, true, -1 },
+	{ "splashy", splashy_prepare, splashy_read, splashy_finish, false, false, true, -1 },
+	{ "fifo", fifo_prepare, fifo_read, fifo_finish, false, false, true, -1 },
+	{ "console", console_prepare, console_read, console_finish, false, false, true, -1 }
 };
 
 static bool
@@ -426,10 +502,15 @@ main(int argc, char **argv, char **envp)
 			continue;
 		debug("Enabling method %s\n", methods[i].name);
 		methods[i].fd = methods[i].prepare(argv[1]);
-		if (methods[i].fd < 0)
+		if (methods[i].fd < 0) {
 			methods[i].active = false;
-		else
+			methods[i].enabled = false;
+		} else {
 			methods[i].active = true;
+			methods[i].enabled = true;
+			if (methods[i].no_more)
+				break;
+		}
 	}
 
 	while (!done) {
@@ -473,7 +554,10 @@ main(int argc, char **argv, char **envp)
 	}
 
 	debug("Writing %i bytes to stdout\n", (int)passlen);
-	write(STDOUT_FILENO, pass, passlen);
+	if (write(STDOUT_FILENO, pass, passlen) == -1) {
+		disable_method(NULL);
+		exit(EXIT_FAILURE);
+	}
 	disable_method(NULL);
 	exit(EXIT_SUCCESS);
 }

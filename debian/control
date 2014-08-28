@@ -3,17 +3,17 @@ Section: admin
 Priority: optional
 Maintainer: Debian Cryptsetup Team <pkg-cryptsetup-devel@lists.alioth.debian.org>
 Uploaders: Jonas Meurer <mejo@debian.org>
-Build-Depends: libgcrypt11-dev (>= 1.4.6-3), libdevmapper-dev (>= 2:1.02.24-4), libpopt-dev, uuid-dev, libselinux1-dev, libsepol1-dev, libtool (>= 2.2), autoconf, automake, pkg-config, autopoint, gettext, debhelper (>= 9.20120410~), xsltproc, docbook-xml, docbook-xsl (>= 1.74.3+dfsg), dpkg-dev (>= 1.15.1), po-debconf
-Standards-Version: 3.9.3
+Build-Depends: libgcrypt20-dev (>= 1.6.1), libdevmapper-dev (>= 2:1.02.24-4), libpopt-dev, uuid-dev, libselinux1-dev, libsepol1-dev, libtool (>= 2.2), autoconf, automake (>= 1:1.12), pkg-config, autopoint, gettext, debhelper (>= 9.20120410~), xsltproc, docbook-xml, docbook-xsl (>= 1.74.3+dfsg), dpkg-dev (>= 1.15.1), po-debconf
+Standards-Version: 3.9.5
 Homepage: http://code.google.com/p/cryptsetup/
-Vcs-Browser: http://svn.debian.org/wsvn/pkg-cryptsetup/cryptsetup/trunk
-Vcs-Svn: svn://svn.debian.org/svn/pkg-cryptsetup/cryptsetup/trunk
+Vcs-Browser: http://anonscm.debian.org/viewvc/pkg-cryptsetup/cryptsetup/trunk
+Vcs-Svn: svn://anonscm.debian.org/pkg-cryptsetup/cryptsetup/trunk
 
 Package: cryptsetup
 Architecture: linux-any
-Depends: ${shlibs:Depends}, ${misc:Depends}, dmsetup, cryptsetup-bin
+Depends: ${shlibs:Depends}, ${misc:Depends}, dmsetup, cryptsetup-bin (>= 2:1.6.0)
 Recommends: kbd, console-setup, initramfs-tools (>= 0.91) | linux-initramfs-tool, busybox | busybox-static
-Suggests: dosfstools, liblocale-gettext-perl
+Suggests: dosfstools, liblocale-gettext-perl, keyutils
 Provides: cryptsetup-luks
 Conflicts: cryptsetup-luks
 Replaces: cryptsetup-luks, hashalot (<< 0.3-2)
@@ -40,11 +40,14 @@ Description: disk encryption support - command line tools
  devices (such as /home or swap partitions), using the Linux kernel
  device mapper target dm-crypt. It features integrated Linux Unified Key
  Setup (LUKS) support.
+ .
+ This package provides cryptsetup, cryptsetup-reencrypt and luksformat.
 
 Package: libcryptsetup4
 Section: libs
 Architecture: linux-any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libgpg-error0 (>= 1.10-0.1), libgcrypt11 (>= 1.4.6-2)
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}, libgpg-error0 (>= 1.10-0.1), libgcrypt20 (>= 1.6.1)
 Description: disk encryption support - shared library
  Cryptsetup provides an interface for configuring encryption on block
  devices (such as /home or swap partitions), using the Linux kernel
@@ -56,6 +59,7 @@ Description: disk encryption support - shared library
 Package: libcryptsetup-dev
 Section: libdevel
 Architecture: linux-any
+Multi-Arch: same
 Depends: ${misc:Depends}, libcryptsetup4 (= ${binary:Version})
 Description: disk encryption support - development files
  Cryptsetup provides an interface for configuring encryption on block

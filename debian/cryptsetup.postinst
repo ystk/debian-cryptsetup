@@ -21,7 +21,7 @@ case "$1" in
 	fi
 
 	# Do a number of checks on the currently installed crypttab
-	
+
 	egrep -v "^[[:space:]]*(#|$)" /etc/crypttab | while read dst src key opts; do
 		if [ -z "$dst" ]; then
 			continue

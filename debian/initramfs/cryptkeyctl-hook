@@ -20,7 +20,7 @@ esac
 
 # Hooks for loading keyctl software into the initramfs
 
-# Check whether cryptroot hook has installed decrypt_keyctl script 
+# Check whether cryptroot hook has installed decrypt_keyctl script
 if [ ! -x ${DESTDIR}/lib/cryptsetup/scripts/decrypt_keyctl ]; then
     exit 0
 fi

@@ -87,7 +87,7 @@ To unlock from remote, you could do something like this:
 	-i "~/id_rsa.initramfs" root@initramfshost.example.com \
 	"echo -ne \"secret\" >/lib/cryptsetup/passfifo"
 
-This example assumes that you have an extra known_hosts file 
+This example assumes that you have an extra known_hosts file
 "~/.ssh/known_hosts.initramfs" which holds the cryptroot system's host-key,
 that you have a file "~/id_rsa.initramfs" which holds the authorized-key for
 the cryptroot system, that the cryptroot system's name is

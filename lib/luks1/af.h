@@ -9,7 +9,8 @@
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -38,5 +39,6 @@
 
 int AF_split(char *src, char *dst, size_t blocksize, unsigned int blocknumbers, const char *hash);
 int AF_merge(char *src, char *dst, size_t blocksize, unsigned int blocknumbers, const char *hash);
+size_t AF_split_sectors(size_t blocksize, unsigned int blocknumbers);
 
 #endif

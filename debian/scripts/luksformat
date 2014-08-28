@@ -81,12 +81,12 @@ $name or die sprintf(gettext("Error: could not generate temporary mapped device 
 # we do not need to be overly concerned with race conditions here, cryptsetup
 # will just fail if the name already exists now.
 printf (gettext("Creating encrypted device on %s...\n"), $device);
-if ((system 'cryptsetup', 'luksFormat', '-s', '256', '--cipher', 'aes-cbc-essiv:sha256', $device)) {
+if ((system 'cryptsetup', 'luksFormat', $device)) {
     die sprintf(gettext("Could not create LUKS device %s"), $device);
 }
 
 print gettext("Please enter your passphrase again to verify it\n");
-if ((system 'cryptsetup', 'luksOpen', $device, $name) != 0) {
+if ((system 'cryptsetup', 'open', '--type', 'luks', $device, $name) != 0) {
     print STDERR gettext("The passphrases you entered were not identical\n");
     exit 1;
 }
@@ -102,7 +102,7 @@ __END__
 
 =head1 NAME
 
-luksformat - Create and format an encrypted LUKS device 
+luksformat - Create and format an encrypted LUKS device
 
 =head1 SYNOPSIS
 

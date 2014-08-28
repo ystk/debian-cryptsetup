@@ -1,5 +1,7 @@
 #!/usr/bin/make -f
 
+include /usr/share/dpkg/architecture.mk
+
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
@@ -43,7 +45,8 @@ configure-stamp:
 		--libdir=/lib \
 		--sbindir=/sbin \
 		--mandir=/usr/share/man \
-		--enable-shared
+		--enable-shared \
+		--enable-cryptsetup-reencrypt
 	find -xtype f >manifest.new
 	diff manifest manifest.new | grep '>' | cut -b3- >config.mess
 	touch $@
@@ -81,27 +84,29 @@ install-stamp: build-stamp
 	dh_testroot
 	dh_clean
 	dh_installdirs
-	mkdir -p $(CURDIR)/debian/cryptsetup-bin
 	mkdir -p $(CURDIR)/debian/cryptsetup-udeb
 	mkdir -p $(CURDIR)/debian/libcryptsetup4-udeb
 	$(MAKE) DESTDIR=$(CURDIR)/debian/cryptsetup-bin install
 
 	# Copy library files to library packages
+	mkdir -p $(CURDIR)/debian/libcryptsetup4/lib/$(DEB_HOST_MULTIARCH)/
+	#mkdir -p $(CURDIR)/debian/libcryptsetup4/usr/lib/$(DEB_HOST_MULTIARCH)/
+
 	cp -a $(CURDIR)/debian/cryptsetup-bin/lib/libcryptsetup.so.* \
-		$(CURDIR)/debian/libcryptsetup4/lib/
+		$(CURDIR)/debian/libcryptsetup4/lib/$(DEB_HOST_MULTIARCH)/
 	#cp -a $(CURDIR)/debian/cryptsetup-bin/lib/libcryptsetup.la \
-	#	$(CURDIR)/debian/libcryptsetup-dev/usr/lib/
+	#	$(CURDIR)/debian/libcryptsetup-dev/usr/lib/$(DEB_HOST_MULTIARCH)/
 	#cp -a $(CURDIR)/debian/cryptsetup-bin/lib/libcryptsetup.a \
-	#	$(CURDIR)/debian/libcryptsetup-dev/usr/lib/
+	#	$(CURDIR)/debian/libcryptsetup-dev/usr/lib/$(DEB_HOST_MULTIARCH)/
 	cp -a $(CURDIR)/debian/cryptsetup-bin/lib/pkgconfig/libcryptsetup.pc \
 		$(CURDIR)/debian/libcryptsetup-dev/usr/lib/pkgconfig/
 	cp -a $(CURDIR)/debian/cryptsetup-bin/usr/include/libcryptsetup.h \
 		$(CURDIR)/debian/libcryptsetup-dev/usr/include/
 	#cp -a $(CURDIR)/debian/cryptsetup-bin/lib/libcryptsetup.so \
-	#	$(CURDIR)/debian/libcryptsetup-dev/usr/lib/
-	dh_link -plibcryptsetup-dev lib/$$(basename $$(readlink debian/cryptsetup-bin/lib/libcryptsetup.so)) usr/lib/libcryptsetup.so
+	#	$(CURDIR)/debian/libcryptsetup-dev/usr/lib/$(DEB_HOST_MULTIARCH)/
+	dh_link -plibcryptsetup-dev lib/$(DEB_HOST_MULTIARCH)/$$(basename $$(readlink debian/libcryptsetup4/lib/$(DEB_HOST_MULTIARCH)/libcryptsetup.so.4)) usr/lib/$(DEB_HOST_MULTIARCH)/libcryptsetup.so
 
-	# Remove libraries from cryptsetup package, they're shiped in seperate library packags
+	# Remove libraries from cryptsetup package, they're shiped in seperate library packages
 	rm -rf $(CURDIR)/debian/cryptsetup-bin/lib
 	rm -rf $(CURDIR)/debian/cryptsetup-bin/usr/include
 
@@ -135,6 +140,10 @@ install-stamp: build-stamp
 		$(CURDIR)/debian/cryptsetup/usr/share/initramfs-tools/hooks/cryptroot
 	install -m 0755 debian/initramfs/cryptroot-script \
 		$(CURDIR)/debian/cryptsetup/usr/share/initramfs-tools/scripts/local-top/cryptroot
+	install -m 0755 debian/initramfs/cryptroot-script-block \
+		$(CURDIR)/debian/cryptsetup/usr/share/initramfs-tools/scripts/local-block/cryptroot
+	install -m 0644 debian/cryptdisks.bash_completion \
+		$(CURDIR)/debian/cryptsetup/etc/bash_completion.d/cryptdisks
 	install -m 0755 debian/cryptsetup.reportbug-script \
 		$(CURDIR)/debian/cryptsetup/usr/share/bug/cryptsetup
 ifeq ($(shell dpkg-vendor --is Ubuntu && echo yes),yes)
@@ -142,6 +151,7 @@ ifeq ($(shell dpkg-vendor --is Ubuntu && echo yes),yes)
 	install -m 0644 debian/cryptsetup.apport \
 		$(CURDIR)/debian/cryptsetup/usr/share/apport/package-hooks/cryptsetup.py
 endif
+
 	$(MAKE) -C debian/scripts/po DESTDIR=$(CURDIR)/debian/cryptsetup-bin install
 	touch $@
 
@@ -156,6 +166,7 @@ binary-arch: build install
 	dh_installdocs -a
 	dh_installexamples -a debian/scripts/gen-ssl-key
 	dh_installinit -a --no-start --name=cryptdisks-early --update-rcd-params="start 26 S . start 59 0 6 ."
+	dh_installinit -a --no-start --name=cryptdisks-udev
 	dh_installinit -a --no-start --name=cryptdisks --update-rcd-params="start 28 S . start 48 0 6 ."
 	dh_installman -a debian/doc/crypttab.5 debian/doc/cryptdisks_start.8 debian/doc/cryptdisks_stop.8
 	dh_installman -p cryptsetup-bin debian/luksformat.8

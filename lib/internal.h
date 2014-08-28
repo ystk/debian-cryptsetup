@@ -1,13 +1,15 @@
 /*
  * libcryptsetup - cryptsetup library internal
  *
- * Copyright (C) 2004, Christophe Saout <christophe@saout.de>
+ * Copyright (C) 2004, Jana Saout <jana@saout.de>
  * Copyright (C) 2004-2007, Clemens Fruhwirth <clemens@endorphin.org>
  * Copyright (C) 2009-2012, Red Hat, Inc. All rights reserved.
+ * Copyright (C) 2009-2012, Milan Broz
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -22,21 +24,20 @@
 #ifndef INTERNAL_H
 #define INTERNAL_H
 
-#ifdef HAVE_CONFIG_H
-#	include "config.h"
-#endif
-
 #include <stdint.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include <inttypes.h>
 
 #include "nls.h"
+#include "bitops.h"
 #include "utils_crypt.h"
 #include "utils_loop.h"
 #include "utils_dm.h"
 #include "utils_fips.h"
 #include "crypto_backend.h"
+
+#include "libcryptsetup.h"
 
 /* to silent gcc -Wcast-qual for const cast */
 #define CONST_CAST(x) (x)(uintptr_t)
@@ -60,44 +61,60 @@ struct volume_key *crypt_alloc_volume_key(unsigned keylength, const char *key);
 struct volume_key *crypt_generate_volume_key(struct crypt_device *cd, unsigned keylength);
 void crypt_free_volume_key(struct volume_key *vk);
 
+/* Device backend */
+struct device;
+int device_alloc(struct device **device, const char *path);
+void device_free(struct device *device);
+const char *device_path(const struct device *device);
+const char *device_block_path(const struct device *device);
+void device_topology_alignment(struct device *device,
+			    unsigned long *required_alignment, /* bytes */
+			    unsigned long *alignment_offset,   /* bytes */
+			    unsigned long default_alignment);
+int device_block_size(struct device *device);
+int device_read_ahead(struct device *device, uint32_t *read_ahead);
+int device_size(struct device *device, uint64_t *size);
+int device_open(struct device *device, int flags);
+
+enum devcheck { DEV_OK = 0, DEV_EXCL = 1, DEV_SHARED = 2 };
+int device_block_adjust(struct crypt_device *cd,
+			struct device *device,
+			enum devcheck device_check,
+			uint64_t device_offset,
+			uint64_t *size,
+			uint32_t *flags);
+size_t size_round_up(size_t size, unsigned int block);
+
+/* Receive backend devices from context helpers */
+struct device *crypt_metadata_device(struct crypt_device *cd);
+struct device *crypt_data_device(struct crypt_device *cd);
+
 int crypt_confirm(struct crypt_device *cd, const char *msg);
 
 char *crypt_lookup_dev(const char *dev_id);
-int crypt_sysfs_check_crypt_segment(const char *device, uint64_t offset, uint64_t size);
-int crypt_sysfs_get_rotational(int major, int minor, int *rotational);
+int crypt_dev_is_rotational(int major, int minor);
+int crypt_dev_is_partition(const char *dev_path);
+char *crypt_get_partition_device(const char *dev_path, uint64_t offset, uint64_t size);
+char *crypt_get_base_device(const char *dev_path);
+uint64_t crypt_dev_partition_offset(const char *dev_path);
 
-int sector_size_for_device(const char *device);
-int device_read_ahead(const char *dev, uint32_t *read_ahead);
-ssize_t write_blockwise(int fd, void *buf, size_t count);
-ssize_t read_blockwise(int fd, void *_buf, size_t count);
-ssize_t write_lseek_blockwise(int fd, char *buf, size_t count, off_t offset);
-int device_ready(struct crypt_device *cd, const char *device, int mode);
-int device_size(const char *device, uint64_t *size);
+ssize_t write_blockwise(int fd, int bsize, void *buf, size_t count);
+ssize_t read_blockwise(int fd, int bsize, void *_buf, size_t count);
+ssize_t write_lseek_blockwise(int fd, int bsize, char *buf, size_t count, off_t offset);
 
-enum devcheck { DEV_OK = 0, DEV_EXCL = 1, DEV_SHARED = 2 };
-int device_check_and_adjust(struct crypt_device *cd,
-			    const char *device,
-			    enum devcheck device_check,
-			    uint64_t *size,
-			    uint64_t *offset,
-			    uint32_t *flags);
+unsigned crypt_getpagesize(void);
+int init_crypto(struct crypt_device *ctx);
 
-void logger(struct crypt_device *cd, int class, const char *file, int line, const char *format, ...);
+void logger(struct crypt_device *cd, int class, const char *file, int line, const char *format, ...) __attribute__ ((format (printf, 5, 6)));
 #define log_dbg(x...) logger(NULL, CRYPT_LOG_DEBUG, __FILE__, __LINE__, x)
 #define log_std(c, x...) logger(c, CRYPT_LOG_NORMAL, __FILE__, __LINE__, x)
 #define log_verbose(c, x...) logger(c, CRYPT_LOG_VERBOSE, __FILE__, __LINE__, x)
 #define log_err(c, x...) logger(c, CRYPT_LOG_ERROR, __FILE__, __LINE__, x)
 
 int crypt_get_debug_level(void);
-void debug_processes_using_device(const char *name);
 
 int crypt_memlock_inc(struct crypt_device *ctx);
 int crypt_memlock_dec(struct crypt_device *ctx);
-
-void get_topology_alignment(const char *device,
-			    unsigned long *required_alignment, /* bytes */
-			    unsigned long *alignment_offset,   /* bytes */
-			    unsigned long default_alignment);
 
 int crypt_random_init(struct crypt_device *ctx);
 int crypt_random_get(struct crypt_device *ctx, char *buf, size_t len, int quality);
@@ -127,7 +144,7 @@ typedef enum {
 			    * random algorithm */
 } crypt_wipe_type;
 
-int crypt_wipe(const char *device,
+int crypt_wipe(struct device *device,
 	       uint64_t offset,
 	       uint64_t sectors,
 	       crypt_wipe_type type,

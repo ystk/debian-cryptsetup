@@ -96,13 +96,13 @@ To tell cryptsetup to let you authenticate with the openct backend, you need to
 pass the respective decrypt script to it as a parameter in /etc/crypttab
 (assumed that /dev/sda5 is your encrypted partition):
 
-	sda5_crypt /dev/sda5 none luks,keyscript=/lib/cryptsetup/scripts/decrypt_openct
+	sda5_crypt /dev/sda5 none luks,keyscript=decrypt_openct
 
 At the moment all data objects have the same label 'pkcs15-init'. Once openct
 supports labelling data objects, you can pass the respective label to openct with
 the key parameter in /etc/crypttab like this:
 
-	sda5_crypt /dev/sda5 none luks,keyscript=/lib/cryptsetup/scripts/decrypt_openct,key=foo
+	sda5_crypt /dev/sda5 none luks,keyscript=decrypt_openct,key=foo
 
 For the time being, 'pkcs15-init' is passed to openct when no key is specified.
 

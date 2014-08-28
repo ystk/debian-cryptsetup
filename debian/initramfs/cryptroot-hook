@@ -255,6 +255,9 @@ get_device_opts() {
 			luks)
 				LUKS_FOUND=1
 				;;
+			tcrypt)
+				OPTIONS="$OPTIONS,$opt"
+				;;
 			*)
 				# Presumably a non-supported option
 				;;
@@ -378,7 +381,11 @@ add_device() {
 		fi
 
 		# It is a lvm device!
-		lastopts="lvm=$nodes"
+		if [ -z "$opts" ]; then
+			opts="lvm=$nodes"
+		else
+			opts="$opts,lvm=$nodes"
+		fi
 		nodes="$lvmnodes"
 	fi
 
@@ -441,7 +448,7 @@ add_device() {
 }
 
 cpu_has_aesni() {
-	return $(grep -q aes /proc/cpuinfo)
+	return $(grep -q "^flags\s*:\s*.*aes" /proc/cpuinfo)
 }
 
 add_crypto_modules() {
@@ -503,6 +510,12 @@ setup="no"
 rootdev=""
 resumedevs=""
 
+# Include cryptsetup modules, regardless of _this_ machine
+# configuration
+if [ -n "$CRYPTSETUP" ] && [ "$CRYPTSETUP" != "n" ]; then
+    setup="yes"
+fi
+
 # Find the root and resume device(s)
 if [ -r /etc/crypttab ]; then
 	rootdev=$(get_root_device)
@@ -518,7 +531,14 @@ for dev in $rootdev $resumedevs; do
 		echo "cryptsetup: FAILURE: could not determine configuration for $dev" >&2
 		continue
 	fi
-	setup="yes"
+
+	if [ -n "$modules" ]; then
+		setup="yes"
+	fi
+
+	if [ "$setup" = "no" ]; then
+		continue
+	fi
 
 	if [ "$MODULES" = "most" ]; then
 		archcrypto="$(find "$MODULESDIR/kernel/arch" -type d -name "crypto" 2>/dev/null)"
@@ -534,14 +554,14 @@ for dev in $rootdev $resumedevs; do
 done
 
 # With large initramfs, we always add a basic subset of modules
-if [ "$MODULES" != "dep" ]; then
+if [ "$MODULES" != "dep" ] && [ "$setup" = "yes" ]; then
 	for mod in aes cbc chainiv cryptomgr krng sha256 xts; do
 		add_crypto_modules $mod
 	done
 fi
 
 # See if we need to add the basic components
-if [ "$MODULES" != "dep" ] || [ "$setup" = "yes" ]; then
+if [ "$setup" = "yes" ]; then
 	for mod in dm_mod dm_crypt; do
 		manual_add_modules $mod
 	done
