@@ -3,10 +3,12 @@
  *
  * Copyright (C) 2004-2007, Clemens Fruhwirth <clemens@endorphin.org>
  * Copyright (C) 2009-2012, Red Hat, Inc. All rights reserved.
+ * Copyright (C) 2009-2012, Milan Broz
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -23,6 +25,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
+#include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -90,7 +94,9 @@ void *crypt_safe_alloc(size_t size)
 		return NULL;
 
 	alloc->size = size;
+	memset(&alloc->data, 0, size);
 
+	/* coverity[leaked_storage] */
 	return &alloc->data;
 }
 
@@ -151,7 +157,7 @@ static int untimed_read(int fd, char *pass, size_t maxlen)
 static int timed_read(int fd, char *pass, size_t maxlen, long timeout)
 {
 	struct timeval t;
-	fd_set fds;
+	fd_set fds = {}; /* Just to avoid scan-build false report for FD_SET */
 	int failed = -1;
 
 	FD_ZERO(&fds);
@@ -170,16 +176,18 @@ static int interactive_pass(const char *prompt, char *pass, size_t maxlen,
 {
 	struct termios orig, tmp;
 	int failed = -1;
-	int infd = STDIN_FILENO, outfd;
+	int infd, outfd;
 
 	if (maxlen < 1)
 		goto out_err;
 
 	/* Read and write to /dev/tty if available */
-	if ((infd = outfd = open("/dev/tty", O_RDWR)) == -1) {
+	infd = open("/dev/tty", O_RDWR);
+	if (infd == -1) {
 		infd = STDIN_FILENO;
 		outfd = STDERR_FILENO;
-	}
+	} else
+		outfd = infd;
 
 	if (tcgetattr(infd, &orig))
 		goto out_err;
@@ -260,6 +268,49 @@ out_err:
 }
 
 /*
+ * A simple call to lseek(3) might not be possible for some inputs (e.g.
+ * reading from a pipe), so this function instead reads of up to BUFSIZ bytes
+ * at a time until the specified number of bytes. It returns -1 on read error
+ * or when it reaches EOF before the requested number of bytes have been
+ * discarded.
+ */
+static int keyfile_seek(int fd, size_t bytes)
+{
+	char tmp[BUFSIZ];
+	size_t next_read;
+	ssize_t bytes_r;
+	off_t r;
+
+	r = lseek(fd, bytes, SEEK_CUR);
+	if (r > 0)
+		return 0;
+	if (r < 0 && errno != ESPIPE)
+		return -1;
+
+	while (bytes > 0) {
+		/* figure out how much to read */
+		next_read = bytes > sizeof(tmp) ? sizeof(tmp) : bytes;
+
+		bytes_r = read(fd, tmp, next_read);
+		if (bytes_r < 0) {
+			if (errno == EINTR)
+				continue;
+
+			/* read error */
+			return -1;
+		}
+
+		if (bytes_r == 0)
+			/* EOF */
+			break;
+
+		bytes -= bytes_r;
+	}
+
+	return bytes == 0 ? 0 : -1;
+}
+
+/*
  * Note: --key-file=- is interpreted as a read from a binary file (stdin)
  * key_size_max == 0 means detect maximum according to input type (tty/file)
  * timeout and verify options only applies to tty input
@@ -272,7 +323,7 @@ int crypt_get_key(const char *prompt,
 {
 	int fd, regular_file, read_stdin, char_read, unlimited_read = 0;
 	int r = -EINVAL;
-	char *pass = NULL, tmp;
+	char *pass = NULL;
 	size_t buflen, i, file_read_size;
 	struct stat st;
 
@@ -340,11 +391,10 @@ int crypt_get_key(const char *prompt,
 	}
 
 	/* Discard keyfile_offset bytes on input */
-	for(i = 0; i < keyfile_offset; i++)
-		if (read(fd, &tmp, 1) != 1) {
-			log_err(cd, _("Cannot seek to requested keyfile offset.\n"));
-			goto out_err;
-		}
+	if (keyfile_offset && keyfile_seek(fd, keyfile_offset) < 0) {
+		log_err(cd, _("Cannot seek to requested keyfile offset.\n"));
+		goto out_err;
+	}
 
 	for(i = 0; i < keyfile_size_max; i++) {
 		if(i == buflen) {
@@ -396,4 +446,95 @@ out_err:
 	if (r)
 		crypt_safe_free(pass);
 	return r;
+}
+
+ssize_t crypt_hex_to_bytes(const char *hex, char **result, int safe_alloc)
+{
+	char buf[3] = "xx\0", *endp, *bytes;
+	size_t i, len;
+
+	len = strlen(hex);
+	if (len % 2)
+		return -EINVAL;
+	len /= 2;
+
+	bytes = safe_alloc ? crypt_safe_alloc(len) : malloc(len);
+	if (!bytes)
+		return -ENOMEM;
+
+	for (i = 0; i < len; i++) {
+		memcpy(buf, &hex[i * 2], 2);
+		bytes[i] = strtoul(buf, &endp, 16);
+		if (endp != &buf[2]) {
+			safe_alloc ? crypt_safe_free(bytes) : free(bytes);
+			return -EINVAL;
+		}
+	}
+	*result = bytes;
+	return i;
+}
+
+/*
+ * Device size string parsing, suffixes:
+ * s|S - 512 bytes sectors
+ * k  |K  |m  |M  |g  |G  |t  |T   - 1024 base
+ * kiB|KiB|miB|MiB|giB|GiB|tiB|TiB - 1024 base
+ * kb |KB |mM |MB |gB |GB |tB |TB  - 1000 base
+ */
+int crypt_string_to_size(struct crypt_device *cd, const char *s, uint64_t *size)
+{
+	char *endp = NULL;
+	size_t len;
+	uint64_t mult_base, mult, tmp;
+
+	*size = strtoull(s, &endp, 10);
+	if (!isdigit(s[0]) ||
+	    (errno == ERANGE && *size == ULLONG_MAX) ||
+	    (errno != 0 && *size == 0))
+		return -EINVAL;
+
+	if (!endp || !*endp)
+		return 0;
+
+	len = strlen(endp);
+	/* Allow "B" and "iB" suffixes */
+	if (len > 3 ||
+	   (len == 3 && (endp[1] != 'i' || endp[2] != 'B')) ||
+	   (len == 2 && endp[1] != 'B'))
+		return -EINVAL;
+
+	if (len == 1 || len == 3)
+		mult_base = 1024;
+	else
+		mult_base = 1000;
+
+	mult = 1;
+	switch (endp[0]) {
+	case 's':
+	case 'S': mult = 512;
+		break;
+	case 't':
+	case 'T': mult *= mult_base;
+		 /* Fall through */
+	case 'g':
+	case 'G': mult *= mult_base;
+		 /* Fall through */
+	case 'm':
+	case 'M': mult *= mult_base;
+		 /* Fall through */
+	case 'k':
+	case 'K': mult *= mult_base;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	tmp = *size * mult;
+	if ((tmp / *size) != mult) {
+		log_dbg("Device size overflow.");
+		return -EINVAL;
+	}
+
+	*size = tmp;
+	return 0;
 }

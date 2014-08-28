@@ -2,18 +2,20 @@
  * NSS crypto backend implementation
  *
  * Copyright (C) 2010-2012, Red Hat, Inc. All rights reserved.
+ * Copyright (C) 2010-2014, Milan Broz
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * This file is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this file; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
@@ -33,14 +35,15 @@ struct hash_alg {
 	SECOidTag oid;
 	CK_MECHANISM_TYPE ck_type;
 	int length;
+	unsigned int block_length;
 };
 
 static struct hash_alg hash_algs[] = {
-	{ "sha1", SEC_OID_SHA1, CKM_SHA_1_HMAC, 20 },
-	{ "sha256", SEC_OID_SHA256, CKM_SHA256_HMAC, 32 },
-	{ "sha384", SEC_OID_SHA384, CKM_SHA384_HMAC, 48 },
-	{ "sha512", SEC_OID_SHA512, CKM_SHA512_HMAC, 64 },
-//	{ "ripemd160", SEC_OID_RIPEMD160, CKM_RIPEMD160_HMAC, 20 },
+	{ "sha1",   SEC_OID_SHA1,   CKM_SHA_1_HMAC,  20,  64 },
+	{ "sha256", SEC_OID_SHA256, CKM_SHA256_HMAC, 32,  64 },
+	{ "sha384", SEC_OID_SHA384, CKM_SHA384_HMAC, 48, 128 },
+	{ "sha512", SEC_OID_SHA512, CKM_SHA512_HMAC, 64, 128 },
+//	{ "ripemd160", SEC_OID_RIPEMD160, CKM_RIPEMD160_HMAC, 20, 64 },
 	{ NULL, 0, 0, 0 }
 };
 
@@ -297,4 +300,20 @@ int crypt_backend_rng(char *buffer, size_t length, int quality, int fips)
 		return -EINVAL;
 
 	return 0;
+}
+
+/* PBKDF */
+int crypt_pbkdf(const char *kdf, const char *hash,
+		const char *password, size_t password_length,
+		const char *salt, size_t salt_length,
+		char *key, size_t key_length,
+		unsigned int iterations)
+{
+	struct hash_alg *ha = _get_alg(hash);
+
+	if (!ha || !kdf || strncmp(kdf, "pbkdf2", 6))
+		return -EINVAL;
+
+	return pkcs5_pbkdf2(hash, password, password_length, salt, salt_length,
+			    iterations, key_length, key, ha->block_length);
 }

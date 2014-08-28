@@ -1,12 +1,14 @@
 /*
  * cryptsetup plain device helper functions
  *
- * Copyright (C) 2004, Christophe Saout <christophe@saout.de>
- * Copyright (C) 2010-2011 Red Hat, Inc. All rights reserved.
+ * Copyright (C) 2004, Jana Saout <jana@saout.de>
+ * Copyright (C) 2010-2012 Red Hat, Inc. All rights reserved.
+ * Copyright (C) 2010-2012, Milan Broz
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -19,7 +21,7 @@
  */
 
 #include <string.h>
-#include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include "libcryptsetup.h"
@@ -81,7 +83,11 @@ int crypt_plain_hash(struct crypt_device *ctx __attribute__((unused)),
 	/* hash[:hash_length] */
 	if ((s = strchr(hash_name_buf, ':'))) {
 		*s = '\0';
-		hash_size = atoi(++s);
+		s++;
+		if (!*s || sscanf(s, "%zd", &hash_size) != 1) {
+			log_dbg("Hash length is not a number");
+			return -EINVAL;
+		}
 		if (hash_size > key_size) {
 			log_dbg("Hash length %zd > key length %zd",
 				hash_size, key_size);
@@ -93,7 +99,16 @@ int crypt_plain_hash(struct crypt_device *ctx __attribute__((unused)),
 		pad_size = 0;
 	}
 
-	r = hash(hash_name_buf, hash_size, key, passphrase_size, passphrase);
+	/* No hash, copy passphrase directly */
+	if (!strcmp(hash_name_buf, "plain")) {
+		if (passphrase_size < hash_size) {
+			log_dbg("Too short plain passphrase.");
+			return -EINVAL;
+		}
+		memcpy(key, passphrase, hash_size);
+		r = 0;
+	} else
+		r = hash(hash_name_buf, hash_size, key, passphrase_size, passphrase);
 
 	if (r == 0 && pad_size)
 		memset(key + hash_size, 0, pad_size);

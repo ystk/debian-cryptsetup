@@ -2,18 +2,20 @@
  * Linux kernel userspace API crypto backend implementation
  *
  * Copyright (C) 2010-2012, Red Hat, Inc. All rights reserved.
+ * Copyright (C) 2010-2014, Milan Broz
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * This file is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This file is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this file; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
@@ -42,15 +44,16 @@ struct hash_alg {
 	const char *name;
 	const char *kernel_name;
 	int length;
+	unsigned int block_length;
 };
 
 static struct hash_alg hash_algs[] = {
-	{ "sha1", "sha1", 20 },
-	{ "sha256", "sha256", 32 },
-	{ "sha512", "sha512", 64 },
-	{ "ripemd160", "rmd160", 20 },
-	{ "whirlpool", "wp512", 64 },
-	{ NULL, 0 }
+	{ "sha1",      "sha1",   20,  64 },
+	{ "sha256",    "sha256", 32,  64 },
+	{ "sha512",    "sha512", 64, 128 },
+	{ "ripemd160", "rmd160", 20,  64 },
+	{ "whirlpool", "wp512",  64,  64 },
+	{ NULL,        NULL,      0,   0 }
 };
 
 struct crypt_hash {
@@ -65,31 +68,8 @@ struct crypt_hmac {
 	int hash_len;
 };
 
-static int _socket_init(struct sockaddr_alg *sa, int *tfmfd, int *opfd)
-{
-	*tfmfd = socket(AF_ALG, SOCK_SEQPACKET, 0);
-	if (*tfmfd == -1)
-		goto bad;
-
-	if (bind(*tfmfd, (struct sockaddr *)sa, sizeof(*sa)) == -1)
-		goto bad;
-
-	*opfd = accept(*tfmfd, NULL, 0);
-	if (*opfd == -1)
-		goto bad;
-
-	return 0;
-bad:
-	if (*tfmfd != -1) {
-		close(*tfmfd);
-		*tfmfd = -1;
-	}
-	if (*opfd != -1) {
-		close(*opfd);
-		*opfd = -1;
-	}
-	return -EINVAL;
-}
+/* Defined in crypt_kernel_ciphers.c */
+extern int crypt_kernel_socket_init(struct sockaddr_alg *sa, int *tfmfd, int *opfd);
 
 int crypt_backend_init(struct crypt_device *ctx)
 {
@@ -107,7 +87,7 @@ int crypt_backend_init(struct crypt_device *ctx)
 	if (uname(&uts) == -1 || strcmp(uts.sysname, "Linux"))
 		return -EINVAL;
 
-	if (_socket_init(&sa, &tfmfd, &opfd) < 0)
+	if (crypt_kernel_socket_init(&sa, &tfmfd, &opfd) < 0)
 		return -EINVAL;
 
 	close(tfmfd);
@@ -172,7 +152,7 @@ int crypt_hash_init(struct crypt_hash **ctx, const char *name)
 
 	strncpy((char *)sa.salg_name, ha->kernel_name, sizeof(sa.salg_name));
 
-	if (_socket_init(&sa, &h->tfmfd, &h->opfd) < 0) {
+	if (crypt_kernel_socket_init(&sa, &h->tfmfd, &h->opfd) < 0) {
 		free(h);
 		return -EINVAL;
 	}
@@ -247,7 +227,7 @@ int crypt_hmac_init(struct crypt_hmac **ctx, const char *name,
 	snprintf((char *)sa.salg_name, sizeof(sa.salg_name),
 		 "hmac(%s)", ha->kernel_name);
 
-	if (_socket_init(&sa, &h->tfmfd, &h->opfd) < 0) {
+	if (crypt_kernel_socket_init(&sa, &h->tfmfd, &h->opfd) < 0) {
 		free(h);
 		return -EINVAL;
 	}
@@ -301,4 +281,20 @@ int crypt_hmac_destroy(struct crypt_hmac *ctx)
 int crypt_backend_rng(char *buffer, size_t length, int quality, int fips)
 {
 	return -EINVAL;
+}
+
+/* PBKDF */
+int crypt_pbkdf(const char *kdf, const char *hash,
+		const char *password, size_t password_length,
+		const char *salt, size_t salt_length,
+		char *key, size_t key_length,
+		unsigned int iterations)
+{
+	struct hash_alg *ha = _get_alg(hash);
+
+	if (!ha || !kdf || strncmp(kdf, "pbkdf2", 6))
+		return -EINVAL;
+
+	return pkcs5_pbkdf2(hash, password, password_length, salt, salt_length,
+			    iterations, key_length, key, ha->block_length);
 }

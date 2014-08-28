@@ -1,13 +1,15 @@
 /*
  * devname - search for device name
  *
- * Copyright (C) 2004, Christophe Saout <christophe@saout.de>
+ * Copyright (C) 2004, Jana Saout <jana@saout.de>
  * Copyright (C) 2004-2007, Clemens Fruhwirth <clemens@endorphin.org>
  * Copyright (C) 2009-2012, Red Hat, Inc. All rights reserved.
+ * Copyright (C) 2009-2013, Milan Broz
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -26,13 +28,10 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include "utils_dm.h"
-
-char *crypt_lookup_dev(const char *dev_id);
-int crypt_sysfs_check_crypt_segment(const char *device, uint64_t offset, uint64_t size);
-int crypt_sysfs_get_rotational(int major, int minor, int *rotational);
+#include "internal.h"
 
 static char *__lookup_dev(char *path, dev_t dev, int dir_level, const int max_level)
 {
@@ -135,7 +134,7 @@ char *crypt_lookup_dev(const char *dev_id)
 	if (snprintf(path, sizeof(path), "/sys/dev/block/%s", dev_id) < 0)
 		return NULL;
 
-	len = readlink(path, link, sizeof(link));
+	len = readlink(path, link, sizeof(link) - 1);
 	if (len < 0) {
 		/* Without /sys use old scan */
 		if (stat("/sys/dev/block", &st) < 0)
@@ -168,15 +167,12 @@ char *crypt_lookup_dev(const char *dev_id)
 	return devpath;
 }
 
-static int crypt_sysfs_get_major_minor(const char *kname, int *major, int *minor)
+static int _read_uint64(const char *sysfs_path, uint64_t *value)
 {
-	char path[PATH_MAX], tmp[64] = {0};
-	int fd, r = 0;
+	char tmp[64] = {0};
+	int fd, r;
 
-	if (snprintf(path, sizeof(path), "/sys/block/%s/dev", kname) < 0)
-		return 0;
-
-	if ((fd = open(path, O_RDONLY)) < 0)
+	if ((fd = open(sysfs_path, O_RDONLY)) < 0)
 		return 0;
 	r = read(fd, tmp, sizeof(tmp));
 	close(fd);
@@ -184,85 +180,185 @@ static int crypt_sysfs_get_major_minor(const char *kname, int *major, int *minor
 	if (r <= 0)
 		return 0;
 
-	tmp[63] = '\0';
-	if (sscanf(tmp, "%d:%d", major, minor) != 2)
+        if (sscanf(tmp, "%" PRIu64, value) != 1)
 		return 0;
 
 	return 1;
 }
 
-static int crypt_sysfs_get_holders_dir(const char *device, char *path, int size)
+static int _sysfs_get_uint64(int major, int minor, uint64_t *value, const char *attr)
 {
+	char path[PATH_MAX];
+
+	if (snprintf(path, sizeof(path), "/sys/dev/block/%d:%d/%s",
+		     major, minor, attr) < 0)
+		return 0;
+
+	return _read_uint64(path, value);
+}
+
+static int _path_get_uint64(const char *sysfs_path, uint64_t *value, const char *attr)
+{
+	char path[PATH_MAX];
+
+	if (snprintf(path, sizeof(path), "%s/%s",
+		     sysfs_path, attr) < 0)
+		return 0;
+
+	return _read_uint64(path, value);
+}
+
+int crypt_dev_is_rotational(int major, int minor)
+{
+	uint64_t val;
+
+	if (!_sysfs_get_uint64(major, minor, &val, "queue/rotational"))
+		return 1; /* if failed, expect rotational disk */
+
+	return val ? 1 : 0;
+}
+
+int crypt_dev_is_partition(const char *dev_path)
+{
+	uint64_t val;
 	struct stat st;
 
-	if (stat(device, &st) < 0 || !S_ISBLK(st.st_mode))
+	if (stat(dev_path, &st) < 0)
 		return 0;
 
-	if (snprintf(path, size, "/sys/dev/block/%d:%d/holders",
-		     major(st.st_rdev), minor(st.st_rdev)) < 0)
+	if (!S_ISBLK(st.st_mode))
 		return 0;
 
-	return 1;
+	if (!_sysfs_get_uint64(major(st.st_rdev), minor(st.st_rdev),
+			      &val, "partition"))
+		return 0;
+
+	return val ? 1 : 0;
 }
 
-int crypt_sysfs_check_crypt_segment(const char *device, uint64_t offset, uint64_t size)
+uint64_t crypt_dev_partition_offset(const char *dev_path)
 {
+	uint64_t val;
+	struct stat st;
+
+	if (!crypt_dev_is_partition(dev_path))
+		return 0;
+
+	if (stat(dev_path, &st) < 0)
+		return 0;
+
+	if (!_sysfs_get_uint64(major(st.st_rdev), minor(st.st_rdev),
+			      &val, "start"))
+		return 0;
+
+	return val;
+}
+
+/* Try to find partition which match offset and size on top level device */
+char *crypt_get_partition_device(const char *dev_path, uint64_t offset, uint64_t size)
+{
+	char link[PATH_MAX], path[PATH_MAX], part_path[PATH_MAX], *devname;
+	char *result = NULL;
+	struct stat st;
+	size_t devname_len;
+	ssize_t len;
+	struct dirent *entry;
 	DIR *dir;
-	struct dirent *d;
-	char path[PATH_MAX], *dmname;
-	int major, minor, r = 0;
+	uint64_t part_offset, part_size;
 
-	if (!crypt_sysfs_get_holders_dir(device, path, sizeof(path)))
-		return -EINVAL;
+	if (stat(dev_path, &st) < 0)
+		return NULL;
 
-	if (!(dir = opendir(path)))
-		return -EINVAL;
+	if (!S_ISBLK(st.st_mode))
+		return NULL;
 
-	while (!r && (d = readdir(dir))) {
-		if (!strcmp(d->d_name, ".") || !strcmp(d->d_name, ".."))
+	if (snprintf(path, sizeof(path), "/sys/dev/block/%d:%d",
+		major(st.st_rdev), minor(st.st_rdev)) < 0)
+		return NULL;
+
+	len = readlink(path, link, sizeof(link) - 1);
+	if (len < 0)
+		return NULL;
+
+	/* Get top level disk name for sysfs search */
+	link[len] = '\0';
+	devname = strrchr(link, '/');
+	if (!devname)
+		return NULL;
+	devname++;
+
+	/* DM devices do not use kernel partitions. */
+	if (dm_is_dm_kernel_name(devname))
+		return NULL;
+
+	dir = opendir(path);
+	if (!dir)
+		return NULL;
+
+	devname_len = strlen(devname);
+	while((entry = readdir(dir))) {
+		if (strncmp(entry->d_name, devname, devname_len))
 			continue;
 
-		if (!dm_is_dm_kernel_name(d->d_name)) {
-			r = -EBUSY;
-			break;
-		}
+		if (snprintf(part_path, sizeof(part_path), "%s/%s",
+		    path, entry->d_name) < 0)
+			continue;
 
-		if (!crypt_sysfs_get_major_minor(d->d_name, &major, &minor)) {
-			r = -EINVAL;
-			break;
-		}
+		if (stat(part_path, &st) < 0)
+			continue;
 
-		if (!(dmname = dm_device_path(NULL, major, minor))) {
-			r = -EINVAL;
-			break;
+		if (S_ISDIR(st.st_mode)) {
+			if (!_path_get_uint64(part_path, &part_offset, "start") ||
+			    !_path_get_uint64(part_path, &part_size, "size"))
+				continue;
+			if (part_offset == offset && part_size == size &&
+			    snprintf(part_path, sizeof(part_path), "/dev/%s",
+				     entry->d_name) > 0) {
+				result = strdup(part_path);
+				break;
+			}
 		}
-		r = dm_check_segment(dmname, offset, size);
-		free(dmname);
 	}
 	closedir(dir);
 
-	return r;
+	return result;
 }
 
-int crypt_sysfs_get_rotational(int major, int minor, int *rotational)
+/* Try to find base device from partition */
+char *crypt_get_base_device(const char *dev_path)
 {
-	char path[PATH_MAX], tmp[64] = {0};
-	int fd, r;
+	char link[PATH_MAX], path[PATH_MAX], part_path[PATH_MAX], *devname;
+	struct stat st;
+	ssize_t len;
 
-	if (snprintf(path, sizeof(path), "/sys/dev/block/%d:%d/queue/rotational",
-		     major, minor) < 0)
-		return 0;
+	if (!crypt_dev_is_partition(dev_path))
+		return NULL;
 
-	if ((fd = open(path, O_RDONLY)) < 0)
-		return 0;
-	r = read(fd, tmp, sizeof(tmp));
-	close(fd);
+	if (stat(dev_path, &st) < 0)
+		return NULL;
 
-	if (r <= 0)
-		return 0;
+	if (snprintf(path, sizeof(path), "/sys/dev/block/%d:%d",
+		major(st.st_rdev), minor(st.st_rdev)) < 0)
+		return NULL;
 
-        if (sscanf(tmp, "%d", rotational) != 1)
-		return 0;
+	len = readlink(path, link, sizeof(link) - 1);
+	if (len < 0)
+		return NULL;
 
-	return 1;
+	/* Get top level disk name for sysfs search */
+	link[len] = '\0';
+	devname = strrchr(link, '/');
+	if (!devname)
+		return NULL;
+	*devname = '\0';
+	devname = strrchr(link, '/');
+	if (!devname)
+		return NULL;
+	devname++;
+
+	if (dm_is_dm_kernel_name(devname))
+		return NULL;
+
+	snprintf(part_path, sizeof(part_path), "/dev/%s", devname);
+	return strdup(part_path);
 }
