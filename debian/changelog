@@ -1,3 +1,67 @@
+cryptsetup (2:1.6.6-5) unstable; urgency=high
+
+  * debian/cryptdisks.functions: fix the precheck for ubuntu+upstart
+    before invoking 'status cryptdisks-udev'. (closes: #773456)
+  * debian/cryptdisks.functions: fix the insufficient grep regex for
+    detecting a running cryptdisks-udev (upstart) init script.
+
+ -- Jonas Meurer <mejo@debian.org>  Thu, 22 Jan 2015 21:22:08 +0100
+
+cryptsetup (2:1.6.6-4) unstable; urgency=medium
+
+  [ Simon McVittie ]
+  * debian/initramfs/cryptroot-script: decrypt /usr as well as / so that
+    split-/usr will work with initramfs-tools (>= 0.118). (closes: #767832)
+
+  [ Jonas Meurer ]
+  * debian/cryptdisks.funcctions: check for cryptdisks-udev initscript before
+    actually invoking 'status' on it. It's only useful in ubuntu+upstart
+    environment anyway. (closes: #764564)
+  * debian/askpas.c: fix systemd_read() to really strip trailing newline from
+    input. Thanks to Quentin Lefebvre for report and patch. (closes: #768407)
+
+ -- Jonas Meurer <mejo@debian.org>  Wed, 17 Dec 2014 14:24:41 +0100
+
+cryptsetup (2:1.6.6-3) unstable; urgency=medium
+
+  * debian/initramfs/cryptroot-script: fix environment variable $CRYPTTAB_TRIED
+    to hold the number of actual tries instead of the number of maximum tries.
+    Thanks to Luc Maisonobe for debugging and the patch. (closes: #758788)
+
+ -- Jonas Meurer <mejo@debian.org>  Tue, 07 Oct 2014 19:51:36 +0200
+
+cryptsetup (2:1.6.6-2) unstable; urgency=medium
+
+  * rename 'luksheader' option in crypttab to 'header', as it may be used for
+    different encryption modes later as well.
+  * add support for detached LUKS header to initramfs scripts. Thanks to Pablo
+    Santiago for the hint and DiagonalArg from Launchpad for patch suggestions.
+    (closes: #716652)
+  * fix support for truecrypt devices in initramfs scripts. Thanks to Lukas
+    Wunner for the patch. (closes: #748286)
+  * use blkid instead of fstype everywhere in cryptroot initramfs scripts.
+    Thanks to Pablo Santiago for the hint.
+  * debian/initramfs/cryptroot-hook: add support for 'initramfs' option to
+    crypttab. Thanks to Hugh Davenport for the patch. (closes: #697162)
+  * debian/initramfs/cryptroot-script: add support for multiple btrfs root
+    devices. This should fix the WARNING at mkinitramfs for unencrypted
+    btrfs root device(s) as well. Thanks to Jon Severinsson and Gerald Turner
+    for patches. (closes: #682751, #762268)
+  * debian/initramfs/cryptroot-script: skip missing device in initramfs after
+    dropping to the panic/emergency shell instead of looping in the panic
+    shell. Thanks to Cédric Barboiron for the patch. (closes: #762573)
+  * debian/initramfs/cryptroot-script: for LVM devices, don't set ROOT to
+    $NEWROOT in /etc/param.conf in case that /etc/param.conf already has ROOT
+    set. This is the case for flash-kernel devices. Thanks to Brandon Parker
+    for bugreport and patch. (closes: #759720)
+  * debian/initramfs/cryptroot-script: in slumber loop, retry vg_activate
+    every ten seconds. Fixes LVM on USB in cases that the USB device didn't
+    come up fast enough. (closes: #762032)
+  * fix package version number in debian/NEWS.
+  * bump standards-version to 3.9.6, no changes needed.
+
+ -- Jonas Meurer <mejo@debian.org>  Wed, 20 Aug 2014 19:59:03 +0200
+
 cryptsetup (2:1.6.6-1) unstable; urgency=medium
 
   * new upsream version 1.6.6.

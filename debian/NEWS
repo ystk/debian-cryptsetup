@@ -1,4 +1,4 @@
-cryptsetup (2:1.6.4-5) unstable; urgency=medium
+cryptsetup (2:1.6.6-1) unstable; urgency=medium
 
   The whirlpool hash implemenation has been broken in gcrypt until version
   1.5.3. This has been fixed in subsequent gcrypt releases. In particular,

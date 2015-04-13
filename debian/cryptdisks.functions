@@ -31,7 +31,7 @@ parse_opts () {
 	opts=$(echo -n $1 | sed 's/ *#.*//')
 	PARAMS=""
 	LUKSPARAMS=""
-	LUKSHEADER=""
+	CRYPTHEADER=""
 	TCRYPTPARAMS=""
 	PLAINPARAMS=""
 	CHECK=""
@@ -151,13 +151,13 @@ parse_opts () {
 		luks)
 			USELUKS="yes"
 			;;
-		luksheader)
+		header)
 			if [ -z "$VALUE" ]; then
-				log_warning_msg "$dst: no value for luksheader option, skipping"
+				log_warning_msg "$dst: no value for header option, skipping"
 				return 1
 			fi
 			LUKSPARAMS="$LUKSPARAMS --header=$VALUE"
-			LUKSHEADER="$VALUE"
+			CRYPTHEADER="$VALUE"
 			;;
 		tcrypt)
 			USETCRYPT="yes"
@@ -282,8 +282,8 @@ do_luks () {
 	tried=0
 	keyscriptarg=""
 
-	if ! cryptsetup isLuks "${LUKSHEADER:-$src}" >/dev/null 2>&1; then
-		log_warning_msg "$dst: device '${LUKSHEADER:-$src}' is not a LUKS partition, skipping"
+	if ! cryptsetup isLuks "${CRYPTHEADER:-$src}" >/dev/null 2>&1; then
+		log_warning_msg "$dst: device '${CRYPTHEADER:-$src}' is not a LUKS partition, skipping"
 		return 1
 	fi
 
@@ -750,8 +750,7 @@ do_start () {
 		# will just be a no-op, but we don't want to defer to the
 		# other job entirely because this is the fallback for fixing
 		# up any ordering-dependent decrypting.
-		while status cryptdisks-udev DEVNAME="$dev_match" 2>&1 | grep -q 'start'
-		do
+		[ -x /sbin/status ] && while /sbin/status cryptdisks-udev DEVNAME="$dev_match" 2>&1 | grep -q "\<start"; do
 			sleep 1
 		done
 		handle_crypttab_line_start "$dst" "$src" "$key" "$opts" <&3 || log_action_end_msg $?

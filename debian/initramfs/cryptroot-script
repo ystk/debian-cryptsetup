@@ -65,6 +65,7 @@ parse_options()
 	crypthash=ripemd160
 	crypttarget=cryptroot
 	cryptsource=""
+	cryptheader=""
 	cryptlvm=""
 	cryptkeyscript=""
 	cryptkey="" # This is only used as an argument to an eventual keyscript
@@ -98,6 +99,13 @@ parse_options()
 				cryptsource="/dev/disk/by-label/${cryptsource#LABEL=}"
 			fi
 			export CRYPTTAB_SOURCE="$cryptsource"
+			;;
+		header=*)
+			cryptheader=${x#header=}
+			if [ ! -e "$cryptheader" ] && [ -e "/conf/conf.d/cryptheader/$cryptheader" ]; then
+				cryptheader="/conf/conf.d/cryptheader/$cryptheader"
+			fi
+			export CRYPTTAB_HEADER="$cryptheader"
 			;;
 		lvm=*)
 			cryptlvm=${x#lvm=}
@@ -177,6 +185,11 @@ setup_mapping()
 		return 1
 	fi
 
+	if [ -n "$cryptheader" ] && ! type "$cryptheader" >/dev/null; then
+		message "cryptsetup: error - LUKS header \"$cryptheader\" missing"
+		return 1
+	fi
+
 	# The same target can be specified multiple times
 	# e.g. root and resume lvs-on-lvm-on-crypto
 	if [ -e "/dev/mapper/$crypttarget" ]; then
@@ -208,6 +221,11 @@ setup_mapping()
 
 		slumber=$(( ${slumber} * 10 ))
 		while [ ! -e "$cryptsource" ]; do
+			# retry for LVM devices every 10 seconds
+			if [ ${slumber} -eq $(( ${slumber}/100*100 )) ]; then
+				activate_vg
+			fi
+
 			/bin/sleep 0.1
 			slumber=$(( ${slumber} - 1 ))
 			[ ${slumber} -gt 0 ] || break
@@ -222,23 +240,33 @@ setup_mapping()
 	udev_settle
 
 	# We've given up, but we'll let the user fix matters if they can
-	while [ ! -e "${cryptsource}" ]; do
+	if [ ! -e "${cryptsource}" ]; then
+		
+		echo "  ALERT! ${cryptsource} does not exist."
 		echo "	Check cryptopts=source= bootarg: cat /proc/cmdline"
 		echo "	or missing modules, devices: cat /proc/modules; ls /dev"
-		panic -r "ALERT!  ${cryptsource} does not exist.  Dropping to a shell!"
-	done
+		panic -r "Dropping to a shell. Will skip ${cryptsource} if you can't fix."
+	fi
+
+	if [ ! -e "${cryptsource}" ]; then
+		return 1
+	fi
+
 
 	# Prepare commands
 	cryptopen="/sbin/cryptsetup -T 1"
 	if [ "$cryptdiscard" = "yes" ]; then
 		cryptopen="$cryptopen --allow-discards"
 	fi
-	if /sbin/cryptsetup isLuks $cryptsource >/dev/null 2>&1; then
-		cryptopen="$cryptopen open --type luks $cryptsource $crypttarget"
-	elif [ "$crypttruecrypt" = "yes" ]; then
+	if [ -n "$cryptheader" ]; then
+		cryptopen="$cryptopen --header=$cryptheader"
+	fi
+	if /sbin/cryptsetup isLuks ${cryptheader:-$cryptsource} >/dev/null 2>&1; then
+		cryptopen="$cryptopen open --type luks $cryptsource $crypttarget --key-file=-"
+	elif [ "$crypttcrypt" = "yes" ]; then
 		cryptopen="$cryptopen open --type tcrypt $cryptsource $crypttarget"
 	else
-		cryptopen="$cryptopen -c $cryptcipher -s $cryptsize -h $crypthash open --type plain $cryptsource $crypttarget"
+		cryptopen="$cryptopen -c $cryptcipher -s $cryptsize -h $crypthash open --type plain $cryptsource $crypttarget --key-file=-"
 	fi
 	cryptremove="/sbin/cryptsetup remove $crypttarget"
 	NEWROOT="/dev/mapper/$crypttarget"
@@ -246,7 +274,7 @@ setup_mapping()
 	# Try to get a satisfactory password $crypttries times
 	count=0
 	while [ $crypttries -le 0 ] || [ $count -lt $crypttries ]; do
-		export CRYPTTAB_TRIED="$crypttries"
+		export CRYPTTAB_TRIED="$count"
 		count=$(( $count + 1 ))
 
 		if [ -z "$cryptkeyscript" ]; then
@@ -270,7 +298,7 @@ setup_mapping()
 
 		if [ ! -e "$NEWROOT" ]; then
 			if ! crypttarget="$crypttarget" cryptsource="$cryptsource" \
-			     $cryptkeyscript "$cryptkey" | $cryptopen --key-file=- ; then
+			     $cryptkeyscript "$cryptkey" | $cryptopen; then
 				message "cryptsetup: cryptsetup failed, bad password or options?"
 				continue
 			fi
@@ -297,12 +325,19 @@ setup_mapping()
 				return 1
 			fi
 
-			NEWROOT=${cmdline_root:-/dev/mapper/$cryptlvm}
-			if [ "$cryptrootdev" = "yes" ]; then
-				# required for lilo to find the root device
-				echo "ROOT=$NEWROOT" >>/conf/param.conf
+			# Apparently ROOT is already set in /conf/param.conf for
+			# flashed kernels at least. See bugreport #759720.
+			if [ -f /conf/param.conf ] && grep -q "^ROOT=" /conf/param.conf; then
+				NEWROOT=$(sed -n 's/^ROOT=//p' /conf/param.conf)
+			else
+				NEWROOT=${cmdline_root:-/dev/mapper/$cryptlvm}
+				if [ "$cryptrootdev" = "yes" ]; then
+					# required for lilo to find the root device
+					echo "ROOT=$NEWROOT" >>/conf/param.conf
+				fi
 			fi
-			eval $(fstype < "$NEWROOT")
+			#eval $(fstype < "$NEWROOT")
+			FSTYPE="$(/sbin/blkid -s TYPE -o value "$NEWROOT")"
 		fi
 
 		#if [ -z "$FSTYPE" ] || [ "$FSTYPE" = "unknown" ]; then

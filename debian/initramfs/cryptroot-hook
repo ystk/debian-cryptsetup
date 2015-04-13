@@ -16,8 +16,9 @@ esac
 
 . /usr/share/initramfs-tools/hook-functions
 
-get_root_device() {
+get_fs_devices() {
 	local device mount type options dump pass
+	local wantmount="$1"
 
 	if [ ! -r /etc/fstab ]; then
 		return 1
@@ -25,16 +26,23 @@ get_root_device() {
 
 	grep -s '^[^#]' /etc/fstab | \
 	while read device mount type options dump pass; do
-		if [ "$mount" = "/" ]; then
-			device=$(canonical_device "$device") || return 0
-			echo "$device"
+		if [ "$mount" = "$wantmount" ]; then
+			local devices
+			if [ "$type" = "btrfs" ]; then
+				for dev in $(btrfs filesystem show $(canonical_device "$device" --no-simplify) 2>/dev/null | sed -r -e 's/.*devid .+ path (.+)/\1/;tx;d;:x') ; do
+					devices="$devices $(canonical_device "$dev")"
+				done
+			else
+				devices=$(canonical_device "$device") || return 0
+			fi
+			echo "$devices"
 			return
 		fi
 	done
 }
 
 get_resume_devices() {
-	local device opt count dupe candidates devices
+	local device opt count dupe candidates devices derived
 	candidates=""
 
 	# First, get a list of potential resume devices
@@ -86,16 +94,9 @@ get_resume_devices() {
 		fi
 
 		# Detect devices required by decrypt_derived
-		derived="$(grep "^${device#/dev/mapper/}\b.*decrypt_derived" /etc/crypttab 2>/dev/null | awk '{print $3}')"
+		derived=$(get_derived_device "$device")
 		if [ -n "$derived" ]; then
-			if grep -q "^$derived" /etc/crypttab; then
-				derived=$(canonical_device "/dev/mapper/$derived") || return 0
-				if [ "$derived" != "$rootdev" ]; then
-					devices="$devices $derived"
-				fi
-			else
-				echo "cryptsetup: WARNING: decrypt_derived device $derived not found in crypttab" >&2
-			fi
+			devices="$devices $derived"
 		fi
 
 		device=$(canonical_device "$device") || return 0
@@ -128,6 +129,68 @@ get_resume_devices() {
 	fi
 
 	return 0
+}
+
+get_initramfs_devices() {
+	local device opt count dupe target source key options candidates devices derived
+
+	candidates="$(grep -s '^[^#]' /etc/crypttab | \
+	while read target source key options; do
+		if echo $options | grep -q "\binitramfs\b"; then
+			echo " /dev/mapper/$target"
+		fi
+	done;)"
+
+	devices=""
+	count=0
+	for device in $candidates; do
+		# Detect devices required by decrypt_derived
+		derived=$(get_derived_device "$device")
+		if [ -n "$derived" ]; then
+			devices="$devices $derived"
+		fi
+
+		device=$(canonical_device "$device") || return 0
+
+		# Weed out duplicates
+		dupe=0
+		for opt in $devices; do
+			if [ "$device" = "$opt" ]; then
+				dupe=1
+			fi
+		done
+		if [ $dupe -eq 1 ]; then
+			continue
+		fi
+
+		# This device seems ok
+		devices="$devices $device"
+		count=$(( $count + 1 ))
+	done
+
+	if [ $count -gt 0 ]; then
+		echo $devices
+	fi
+
+	return 0
+}
+
+get_derived_device() {
+	# Detect device required by decrypt_derived
+	local device derived
+	device="$1"
+
+	derived="$(grep "^${device#/dev/mapper/}\b.*decrypt_derived" /etc/crypttab 2>/dev/null | awk '{print $3}')"
+	if [ -n "$derived" ]; then
+		if grep -q "^$derived\b" /etc/crypttab; then
+			derived=$(canonical_device "/dev/mapper/$derived") || return 0
+			if ! echo "$rootdevs" | grep -q "\b$derived\b"; then
+				echo "$derived"
+			fi
+		else
+			echo "cryptsetup: WARNING: decrypt_derived device $derived not found in crypttab" >&2
+		fi
+	fi
 }
 
 node_is_in_crypttab() {
@@ -173,6 +236,7 @@ get_device_opts() {
 	target="$1"
 	extraopts="$2"
 	KEYSCRIPT=""
+	CRYPTHEADER=""
 	OPTIONS=""
 
 	if [ -z "$target" ]; then
@@ -224,29 +288,14 @@ get_device_opts() {
 			cipher=*)
 				OPTIONS="$OPTIONS,$opt"
 				;;
+			size=*)
+				OPTIONS="$OPTIONS,$opt"
+				;;
 			hash=*)
 				OPTIONS="$OPTIONS,$opt"
 				HASH_FOUND=1
 				;;
-			size=*)
-				OPTIONS="$OPTIONS,$opt"
-				;;
-			lvm=*)
-				OPTIONS="$OPTIONS,$opt"
-				;;
-			keyscript=*)
-				opt=${opt#keyscript=}
-				if [ ! -x "/lib/cryptsetup/scripts/$opt" ] && [ ! -x "$opt" ]; then
-					echo "cryptsetup: WARNING: target $target has an invalid keyscript, skipped" >&2
-					return 1
-				fi
-				KEYSCRIPT="$opt"
-				OPTIONS="$OPTIONS,keyscript=/lib/cryptsetup/scripts/$(basename "$opt")"
-				;;
 			tries=*)
-				OPTIONS="$OPTIONS,$opt"
-				;;
-			rootdev)
 				OPTIONS="$OPTIONS,$opt"
 				;;
 			discard)
@@ -255,7 +304,31 @@ get_device_opts() {
 			luks)
 				LUKS_FOUND=1
 				;;
+			header=*)
+				opt="${opt#header=}"
+				if [ ! -e "$opt" ]; then
+					echo "cryptsetup: WARNING: target $target has an invalid header, skipped" >&2
+					return 1
+				fi
+				CRYPTHEADER="$opt"
+				OPTIONS="$OPTIONS,header=$CRYPTHEADER"
+				;;
 			tcrypt)
+				OPTIONS="$OPTIONS,$opt"
+				;;
+			keyscript=*)
+				opt="${opt#keyscript=}"
+				if [ ! -x "/lib/cryptsetup/scripts/$opt" ] && [ ! -x "$opt" ]; then
+					echo "cryptsetup: WARNING: target $target has an invalid keyscript, skipped" >&2
+					return 1
+				fi
+				KEYSCRIPT="$opt"
+				OPTIONS="$OPTIONS,keyscript=/lib/cryptsetup/scripts/$(basename "$opt")"
+				;;
+			lvm=*)
+				OPTIONS="$OPTIONS,$opt"
+				;;
+			rootdev)
 				OPTIONS="$OPTIONS,$opt"
 				;;
 			*)
@@ -270,6 +343,12 @@ get_device_opts() {
 		echo "         If this is wrong, this initramfs image will not boot." >&2
 		echo "         Please read /usr/share/doc/cryptsetup/README.initramfs.gz and add" >&2
 		echo "         the correct hash option to your /etc/crypttab."  >&2
+	fi
+
+	# Warn that header only applies to a LUKS partition currently
+	if [ -n "$CRYPTHEADER" ] && [ -z "$LUKS_FOUND" ]; then
+		echo "WARNING: Option LUKS missing in crypttab for target $target." >&2
+		echo "         Headers are only supported for LUKS devices." >&2
 	fi
 
 	# If keyscript is set, the "key" is just an argument to the script
@@ -308,6 +387,7 @@ get_device_modules() {
 canonical_device() {
 	local dev altdev original
 	dev="$1"
+	opt="$2"
 
 	altdev="${dev#LABEL=}"
 	if [ "$altdev" != "$dev" ]; then
@@ -322,6 +402,11 @@ canonical_device() {
 	original="$dev"
 	if [ -h "$dev" ]; then
 		dev=$(readlink -e "$dev")
+	fi
+
+	if [ "$opt" = "--no-simplify" ]; then
+		echo "$dev"
+		return 0
 	fi
 
 	if [ "x${dev%/dev/dm-*}" = "x" ]; then
@@ -359,7 +444,7 @@ add_device() {
 	fi
 
 	# Flag root device
-	if [ "$nodes" = "$rootdev" ]; then
+	if echo "$rootdevs" | grep -q "\b$nodes\b"; then
 		if [ -z "$opts" ]; then
 			opts="rootdev"
 		else
@@ -427,6 +512,25 @@ add_device() {
 				continue
 			fi
 		fi
+
+		# If we have a LUKS header, make sure it is included
+		# TODO: make it configurable to include the LUKS header into initramfs
+		# disabled for now due to security reasons
+		if [ -n "$CRYPTHEADER" ]; then
+			if [ ! -d "$DESTDIR/conf/conf.d/cryptheader" ]; then
+				mkdir -p "$DESTDIR/conf/conf.d/cryptheader"
+			fi
+
+			#if [ -e "$CONFDIR/conf.d/cryptheader/$CRYPTHEADER" ]; then
+			#	copy_exec "$CONFDIR/conf.d/cryptheader/$CRYPTHEADER" /conf/conf.d/cryptheader >&2
+			#elif [ -e "$CRYPTHEADER" ]; then
+			#	copy_exec "$CRYPTHEADER" /conf/conf.d/cryptheader >&2
+			#else
+			#	echo "cryptsetup: WARNING: failed to find LUKS header $CRYPTHEADER" >&2
+			#	continue
+			#fi
+		fi
+		
 
 		# Calculate needed modules
 		modules=$(get_device_modules $node | sort | uniq)
@@ -507,7 +611,8 @@ add_crypto_modules() {
 #
 
 setup="no"
-rootdev=""
+rootdevs=""
+usrdevs=""
 resumedevs=""
 
 # Include cryptsetup modules, regardless of _this_ machine
@@ -518,15 +623,17 @@ fi
 
 # Find the root and resume device(s)
 if [ -r /etc/crypttab ]; then
-	rootdev=$(get_root_device)
-	if [ -z "$rootdev" ]; then
+	rootdevs=$(get_fs_devices /)
+	if [ -z "$rootdevs" ]; then
 		echo "cryptsetup: WARNING: could not determine root device from /etc/fstab" >&2
 	fi
+	usrdevs=$(get_fs_devices /usr)
 	resumedevs=$(get_resume_devices)
+	initramfsdevs=$(get_initramfs_devices)
 fi
 
 # Load the config opts and modules for each device
-for dev in $rootdev $resumedevs; do
+for dev in $rootdevs $usrdevs $resumedevs $initramfsdevs; do
 	if ! modules=$(add_device "$dev"); then
 		echo "cryptsetup: FAILURE: could not determine configuration for $dev" >&2
 		continue

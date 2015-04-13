@@ -195,13 +195,13 @@ systemd_read(int fd, char **buf, size_t *size)
 {
 	debug("In systemd_read\n");
 	if (fifo_common_read(fd, &systemdbuf, &systemdused, &systemdsize)) {
-		*buf = systemdbuf;
-		*size = systemdused;
 		/* systemd likes to include the terminating newline */
-		if (systemdused > 1 && systemdbuf[systemdused - 1] == '\n') {
+		if (systemdused >= 1 && systemdbuf[systemdused - 1] == '\n') {
 			systemdbuf[systemdused - 1] = '\0';
 			systemdused--;
 		}
+		*buf = systemdbuf;
+		*size = systemdused;
 		return true;
 	}
 

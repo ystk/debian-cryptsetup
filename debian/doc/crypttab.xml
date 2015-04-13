@@ -258,6 +258,17 @@
    </varlistentry>
 
    <varlistentry>
+    <term><emphasis>initramfs</emphasis></term>
+    <listitem>
+     <simpara>The initramfs hook processes the root device, any resume devices
+      and any devices with the initramfs option set. These devices are processed
+      within the initramfs stage of boot. As an example, that allows the use of
+      remote unlocking using dropbear.
+     </simpara>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><emphasis>noearly</emphasis></term>
     <listitem>
      <simpara>The cryptsetup init scripts are invoked twice during the boot
@@ -365,6 +376,15 @@
     <listitem>
      <simpara>
        Key slot (ignored for non-LUKS devices). See <command>cryptsetup -S</command>.
+     </simpara>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><emphasis>header</emphasis>=&lt;path&gt;</term>
+    <listitem>
+     <simpara>
+       Detached header file (ignored for plain dm-crypt devices). See <command>cryptsetup --header</command>.
      </simpara>
     </listitem>
    </varlistentry>
